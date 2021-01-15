@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+data-raw/
+DDSreport_files/
+DDSreport_cache/
+DDSreport.html
