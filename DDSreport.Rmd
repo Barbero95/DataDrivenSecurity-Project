@@ -263,7 +263,7 @@ qplot(x=industry, data=incidentsAttack, fill = as.factor(industry)) + labs(x = "
 
 orgAttack <- data.frame(table(incidentsAttack$org))
 #orgAttack1 <- dplyr::filter(orgAttack, Freq >= 10) #Queden moltes organitzacions i la grafica es fa infumable
-orgAttack2 <- dplyr::filter(orgAttack, Freq >= 20)
+orgAttack2 <- dplyr::filter(orgAttack, Freq >= 20) # lo he acotado a superar el count de 20
 #qplot(x=Var1, y=Freq, data=orgAttack2)
 orgAttack3 <- incidentsAttack[which(incidentsAttack$org %in% orgAttack2$Var1),]
 qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", y = "Count") + theme(
