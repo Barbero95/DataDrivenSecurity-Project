@@ -5,17 +5,17 @@ library(visNetwork)
 
 ids <- as.character(unique(incidents$id))
 
-tecniquesInCar2 <- ids[which(ids %in% raw_car$carnet$edges$to)]
+tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)]
 
 kExists <- ids[which(ids %in% mitre.data$mitrenet$edges$from)]
 
-to <- ids[which(tecniquesInCar2 %in% mitre.data$mitrenet$edges$from)]
+to <- ids[which(tecCar %in% mitre.data$mitrenet$edges$from)]
 
-from <- ids[which(tecniquesInCar2 %in% mitre.data$mitrenet$edges$from)]
+from <- ids[which(tecCar %in% mitre.data$mitrenet$edges$from)]
 
-rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecniquesInCar2)
+rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
 
-rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecniquesInCar2)
+rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
 
 k <- mitre.data$mitrenet$edges[rowsInterFrom,]
 k2 <-  mitre.data$mitrenet$edges[rowsInterTo,]
@@ -73,7 +73,7 @@ sapply(test, length)
 ################################
 
 mitrenet <- raw_attck$attcknet
-igg <- lapply(ids, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet))
+mitrenet2 <- mitre.data$mitrenet
 
 inod <- unique(plyr::ldply(
   ids, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet)[["nodes"]]
@@ -92,15 +92,26 @@ myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", widt
 myg
 
 inod2 <- unique(plyr::ldply(
-  tecniquesInCar2, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet)[["nodes"]]
+  tecCar, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet)[["nodes"]]
 ))
 
 iedg2 <- unique(plyr::ldply(
-  tecniquesInCar2, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet)[["edges"]]
+  tecCar, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet)[["edges"]]
 ))
 
 myg2 <- visNetwork::visNetwork(nodes = inod2, edges = iedg2, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)  %>%visConfigure(enabled = TRUE)
 myg2
+
+inod3 <- unique(plyr::ldply(
+  tecCar, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet2)[["nodes"]]
+))
+
+iedg3 <- unique(plyr::ldply(
+  tecCar, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitrenet2)[["edges"]]
+))
+
+myg3 <- visNetwork::visNetwork(nodes = inod3, edges = iedg3, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)  %>%visConfigure(enabled = TRUE)
+myg3
 
 
 #Pasamos a mirar las organizaciones en la tabla inicidents quedandonos de esta tabla con las rows que contengan uno de los 28 ids que existen en attack
@@ -127,7 +138,7 @@ inciFilterAttackIDs %>%
   theme(legend.position = "none")
 
 #Pasamos a mirar las organizaciones en la tabla inicidents quedandonos de esta tabla con las rows que contengan uno de los 5 ids que existen en car
-inciFilterCarIDs <- incidents[which(incidents$id %in% tecniquesInCar2),]
+inciFilterCarIDs <- incidents[which(incidents$id %in% tecCar),]
 plot_correlation(inciFilterCarIDs) #Ojo esta correlación muy interesante! ya salen en la correlación las tecnicas y a parte qu ehace refernecia a tacticas también a las industrias
 ggplot(inciFilterCarIDs, aes(x = first_event_ts, y = industry, fill = industry)) +
   geom_density_ridges() +
@@ -150,6 +161,18 @@ inciFilterCarIDs %>%
   theme(legend.position = "none")
 
 ################################
+
+groups <- raw_attck$groups[which(raw_attck$groups$mitreid %in% k2PlotDf$Var1),]
+
+fg <- function(x) {
+  paste(paste("Tecnica: ", x["mitreid"]), paste("Name: ", x["name"]), paste("Description: ", x["description"]), sep=",")
+}
+
+res <- apply(groups, 1, fg)
+
+groups2 <- lapply(groups, function(g) {
+  print(g)
+})
 
 
 filter(k2, from %in% c("G0045"))
