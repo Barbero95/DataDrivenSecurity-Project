@@ -207,16 +207,90 @@ tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)] #Tecnicas encontr
 
 tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)] #Tecnicas encontradas en toda la red de mitre 16
 
+#Referencias a Attack -------------------------------------------------------
+rowsInterFromAttack <- which(mitre.data$mitrenet$edges$from %in% tecAttack)
+rowsInterToAttack <- which(mitre.data$mitrenet$edges$to %in% tecAttack)
 
-#referente a CAR
+dfFromAttack <- mitre.data$mitrenet$edges[rowsInterFromAttack,]
+dfToAttack <-  mitre.data$mitrenet$edges[rowsInterToAttack,]
+
+#Empezamos por Groups
+groupsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
+groupsAttack <- as.data.frame(table(groupsAttack$from))
+
+groupsAttackDf <- groupsAttack[which(groupsAttack$Freq > 2),]
+length(groupsAttackDf[[1]])
+qplot(x=Var1, y=Freq, data=groupsAttackDf)
+
+groupsAttackDescrip <- unique(raw_attck$groups[which(raw_attck$groups$mitreid %in% groupsAttackDf$Var1),])
+groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, description)
+
+groupsAttackDescrip %>% kbl() %>% kable_styling()
+
+#Continuamos por tacticas
+tactAttack <- as.data.frame(table(dfFromAttack$to))
+
+rowsTactAttack <- mitre.data$standards$attck$tactics[which(mitre.data$standards$attck$tactics$mitreid %in% tactAttack$Var1),]
+
+rowsTactAttackDescrip <- dplyr::select(rowsTactAttack, mitreid, name, description)
+rowsTactAttackDescrip %>% kbl() %>% kable_styling()
+
+dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$edges$to %in% tactAttack$Var1),]
+dteExtractFromTactAttack <- filter(dteExtractFromTactAttack, startsWith(as.character(dteExtractFromTactAttack$from), "DTE"))
+
+#Continuamos etcnicas de shield
+dteAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "DTE"))
+dteAttack <- as.data.frame(table(dteAttack$from))
+
+rowsDTEShield <- mitre.data$standards$shield$techniques[which(mitre.data$standards$shield$techniques$id %in% dteAttack$Var1),]
+length(rowsDTEShield[[1]])
+rowsDTEShieldDescrip <- dplyr::select(rowsDTEShield, id, name, description)
+rowsDTEShieldDescrip %>% kbl() %>% kable_styling()
+
+#tecnicas shield encontradas con las tacticas
+rowsDTEShieldFromTactics <- mitre.data$standards$shield$techniques[which(mitre.data$standards$shield$techniques$id %in% dteExtractFromTactAttack$from),]
+#Vemos que las encuentra todas y esto deforma nuestras busquedas, hacemos el caso de arriba que son 15 de 33
+length(rowsDTEShieldFromTactics[[1]])
+length(mitre.data$standards$shield$techniques$id)
+
+
+#Procedemos a extraer de from: DOS, DPR, DUC
+extracShield <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$from %in% rowsDTEShield$id),]
+extracShieldDOS <- filter(extracShield, startsWith(as.character(extracShield$to), "DOS"))
+length(extracShieldDOS)[[1]]
+length(unique(extracShieldDOS$to))
+extracShieldDPR <- filter(extracShield, startsWith(as.character(extracShield$to), "DPR"))
+length(extracShieldDPR[[1]])
+length(unique(extracShieldDPR$to))
+extracShieldDUC <- filter(extracShield, startsWith(as.character(extracShield$to), "DUC"))
+length(extracShieldDUC[[1]])
+length(unique(extracShieldDUC$to))
+
+#Procedemos a extraer de TO: DTA,
+extracShield2 <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$to %in% rowsDTEShield$id),]
+extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$from), "DTA"))
+length(unique(extracShieldDTA$from))
+
+#Continuamos por Software
+
+sofwAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "S"))
+sofwAttack <- sort(table(sofwAttack$from))
+
+mAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "M"))
+mAttack <- sort(table(mAttack$from))
+#Referencias a Attack END-------------------------------------------------------
+
+
+
+
+#Referente a CAR
 rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
 rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
 
 k <- mitre.data$mitrenet$edges[rowsInterFrom,]
 k2 <-  mitre.data$mitrenet$edges[rowsInterTo,]
 
-#table(k$to) lo mostramos más adelante
-table(k2$to) #Tacticas usadas en referencia a las tecnicas encontradas en car
+table(k$to) #lo mostramos más adelante
 
 #table(k$from)
 #table(k2$from)
@@ -304,7 +378,3 @@ groups <- dplyr::select(groups, mitreid, name, description)
 
 groups %>% kbl() %>% kable_styling()
 ```
-
-
-
-
