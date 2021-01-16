@@ -21,6 +21,10 @@ library("ggplot2")
 library("hrbrthemes")
 library("viridisLite")
 library("viridis")
+library("sjmisc")
+library("dplyr")
+library("visNetwork")
+library("kableExtra")
 ```
 
 ```{r install_mitre, echo=FALSE}
@@ -195,51 +199,40 @@ __TODO: Actualizar y completar el modelo__
 ## ¿Sería posible predecir ataques?
 
 ```{r david}
+ids <- as.character(unique(incidents$id)) #las tecnicas que se han usado durante los ataques, 28 diferentes
 
-library(ggplot2)
-library(sjmisc)
+tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)] #Tecnicas encontradas en car 5
 
-ids <- as.character(unique(incidents$id))
+tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)] #Tecnicas encontradas en attack 16
 
-tecniquesInCar2 <- ids[which(ids %in% raw_car$carnet$edges$to)]
+tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)] #Tecnicas encontradas en toda la red de mitre 16
 
-kExists <- ids[which(ids %in% mitre.data$mitrenet$edges$from)]
 
-to <- ids[which(tecniquesInCar2 %in% mitre.data$mitrenet$edges$from)]
-
-from <- ids[which(tecniquesInCar2 %in% mitre.data$mitrenet$edges$from)]
-
-rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecniquesInCar2)
-
-rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecniquesInCar2)
+#referente a CAR
+rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
+rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
 
 k <- mitre.data$mitrenet$edges[rowsInterFrom,]
 k2 <-  mitre.data$mitrenet$edges[rowsInterTo,]
 
-#table(k$to)
-#table(k2$to)
+#table(k$to) lo mostramos más adelante
+table(k2$to) #Tacticas usadas en referencia a las tecnicas encontradas en car
 
 #table(k$from)
 #table(k2$from)
-
-DataExplorer::plot_correlation(k2)
 sort(table(k2$from)) #Podemos ver que el grupo G0045 tiene 4 y podemos decir que está detras de más ataques que los demás, tenemos más casos de 3
 
 k2Plot <- filter(k2, startsWith(as.character(k2$from), "G"))
 length(k2Plot$from)
 
-DataExplorer::plot_bar(k2Plot$to)
 k2Plot <- k2Plot %>% mutate_if(is.character, as.factor)
 sort(summary(k2Plot$from))
 sort(table(k2Plot$from))
 k2Plot2 <- table(k2Plot$from)[which(table(k2Plot$from) > 2)]
 k2PlotDf <- data.frame(k2Plot2)
 #Dos graficas que generan lo mismo pero se ven distintas
-qplot(x=Var1, y=Freq, data = k2PlotDf)
 qplot(x=from, data=k2Plot[which(k2Plot$from %in% k2PlotDf$Var1),])
 k3 <- data.frame(to = k2$to, from = k2$from)
-
-qplot(x = from, y=to, data = k2)
 
 k3 <- k3 %>% mutate_if(is.character, as.factor)
 
@@ -255,10 +248,62 @@ sort(table(k5$to)) #Aqu'i podemos ver que de las 245 casos, 41 son de grupos de 
 sort(table(as.character(k5$from))) #Es para ver exactamente cuales son, hago el as.character para quitar todos los factors de las tablas anteriores (los G que tengan 0, S, M, etc)
 
 
-
-
 ```
 
+```{r incidents Attack: org, indus, tec}
+incidentsAttack <- incidents[which(incidents$id %in% tecAttack),]
+incidentsAttack <- dplyr::select(incidentsAttack, id, technique, tactic, org, industry)
+#qplot(x=org, data=incidentsAttack)
+qplot(x=industry, data=incidentsAttack, fill = as.factor(industry)) + labs(x = "Industries", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
+
+orgAttack <- data.frame(table(incidentsAttack$org))
+#orgAttack1 <- dplyr::filter(orgAttack, Freq >= 10) #Queden moltes organitzacions i la grafica es fa infumable
+orgAttack2 <- dplyr::filter(orgAttack, Freq >= 20) # lo he acotado a superar el count de 20
+#qplot(x=Var1, y=Freq, data=orgAttack2)
+orgAttack3 <- incidentsAttack[which(incidentsAttack$org %in% orgAttack2$Var1),]
+qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
+```
+
+```{r incidents CAR: org, indus, tec}
+incidentsCar <- incidents[which(incidents$id %in% tecCar),]
+incidentsCar <- dplyr::select(incidentsCar, id, technique, tactic, org, industry)
+#qplot(x=org, data=incidentsCar)
+qplot(x=industry, data=incidentsCar, fill=as.factor(industry)) + labs(x = "Industries", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
+
+orgCar <- data.frame(table(incidentsCar$org))
+orgCar <- dplyr::filter(orgAttack, Freq >= 25)
+#qplot(x=Var1, y=Freq, data=orgCar, color=factor(Var1))
+orgCar2 <- incidentsCar[which(incidentsCar$org %in% orgCar$Var1),]
+qplot(x=org, data=orgCar2, fill=as.factor(org)) + labs(x = "Organitzations", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
+```
+
+```{r groups}
+
+groups <- raw_attck$groups[which(raw_attck$groups$mitreid %in% k2PlotDf$Var1),]
+groups <- dplyr::select(groups, mitreid, name, description)
+
+groups %>% kbl() %>% kable_styling()
+```
 
 
 
