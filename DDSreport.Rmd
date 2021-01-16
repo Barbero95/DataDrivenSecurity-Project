@@ -260,3 +260,6 @@ sort(table(as.character(k5$from))) #Es para ver exactamente cuales son, hago el 
 ```
 
 
+
+
+

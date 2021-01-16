@@ -1,0 +1,198 @@
+---
+title: "Data Driven Security - Project"
+author: "David Barbero & Marta Vilà"
+date: "Enero 2021"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: yeti
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Objetivo
+
+El objetivo de esta práctica es realizar un estudio de un seguido de incidentes que han recibido diferentes empresas de distintos sectores para poder determinar quién los ha producido así como investigar de qué manera se han podido realizar para futuras prevenciones. Finalmente, se intentará ver si se pueden, o no, predecir estos.
+
+Para poder llevar a cabo este estudio se dispone de datasets que nos han sido proporcionados. Por un lado, tenemos la información de los incidentes a estudiar i, por otro, la información de un seguido de estándares que nos ayudaran a poder sacar conclusiones sobre los incidentes.
+
+## Datasets
+```{r ds_mitre and ds_incidents, echo=TRUE, warning=FALSE, cache=TRUE, results='hide'}
+mitre.data <- readRDS(file = "data/mitredata.rds")
+#mitre.data <- mitre::getLatestDataSet()
+incidents <- readRDS(file = "data/incidents.rds")
+```
+
+## Packages
+Para la realización de este proyecto se usan los siguientes packages de r:
+```{r load_packages, echo=TRUE, results='hide'}
+suppressPackageStartupMessages(library("dplyr"))
+library("tidyr")
+suppressPackageStartupMessages(library("tidyverse"))
+library("DataExplorer")
+library("ggridges")
+library("ggplot2")
+library("hrbrthemes")
+library("viridisLite")
+library("viridis")
+suppressPackageStartupMessages(library("dplyr"))
+library("readr")
+library("packcircles")
+library("ggiraph")
+suppressPackageStartupMessages(library("Hmisc"))
+library("kableExtra")
+library("treemap")
+```
+
+# Análisis exploratorio de los incidentes
+
+Para poder empezar nuestro estudio, inicialmente se presentará el análisis exploratorio de nuestro dataset incidents para poder ver con qué tipo de información estamos trabajando. 
+
+Antes de empezar, por eso, vemos que tenemos una columna donde tenemos información en forma de matriz de modo que acabamos de arreglar el dataset con el que trabajaremos:
+
+
+```{r ds_incidents, echo=TRUE, warning=FALSE, cache=TRUE, results='hide'}
+incidents <- incidents %>% unnest(mitre_attack)
+apply(incidents, 2, function(x) length(unique(x)))
+incidents <- incidents %>%
+  mutate_if(is.character, as.factor)
+```
+```{r ds_incidents_ver, echo=FALSE, warning=FALSE, cache=TRUE}
+kbl(incidents) %>%
+  kable_paper() %>%
+  scroll_box(width = "500px", height = "200px")
+```
+(dataframe incidents obtenido)  
+  
+  
+Ahora, podemos proceder a hacer una primera visión de cuanta información y de qué tipo se trata:  
+
+```{r ds_incidents_summary, echo=FALSE, warning=FALSE, cache=TRUE}
+describe(incidents) %>% html()
+```
+
+## Estudio de las variables cuantitativas
+
+### By industries
+
+```{r byindustriesplot, echo=FALSE, fig.height = 4, fig.width = 6, fig.align = "center", warning=FALSE}
+#By Industries (categorical): Bar Chart
+byindus <- table(incidents$industry)
+indus <- as.data.frame(byindus)
+ggplot(indus, aes(x=Var1, y=Freq)) +
+  geom_bar(stat = "identity", fill="#2D708EFF") +
+  coord_flip() + 
+  theme_ipsum() +
+  theme(axis.title.x = element_blank())+ 
+  theme(axis.title.y = element_blank())
+```
+
+Se puede observar que las que más ataques han sufrido son Retail, Professional y Manufacturing. 
+
+### By tactics
+
+```{r bytacticsplot, echo=FALSE, warning=FALSE, fig.height = 6, fig.width = 6, fig.align = "center"}
+#By Tactics (categorical): Bar Chart
+bytactics <- table(incidents$tactic)
+tact <- as.data.frame(bytactics)
+tmp <- tact %>%
+  filter(!is.na(Freq)) %>%
+  arrange(desc(Freq)) %>%
+  mutate(Var1=factor(Var1, Var1))
+# Set a number of 'empty bar'
+empty_bar=10
+# Add lines to the initial tmpset
+to_add = matrix(NA, empty_bar, ncol(tmp))
+colnames(to_add) = colnames(tmp)
+tmp=rbind(tmp, to_add)
+tmp$id=seq(1, nrow(tmp))
+
+# Get the name and the y position of each label
+label_tmp=tmp
+number_of_bar=nrow(label_tmp)
+angle= 90 - 360 * (label_tmp$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+label_tmp$hjust<-ifelse( angle < -90, 1, 0)
+label_tmp$angle<-ifelse(angle < -90, angle+180, angle)
+label_tmp$Var1 <- paste(label_tmp$Var1, " (", label_tmp$Freq,")", sep="")
+
+# Make the plot
+ggplot(tmp, aes(x=as.factor(id), y=Freq)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  geom_bar(stat="identity", fill=alpha("#20A387FF", 1)) +
+  ylim(-200,2000) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_tmp, aes(x=id, y=Freq+100, label=Var1 ), color="black", alpha=0.6, size=3.15, angle= label_tmp$angle, hjust=label_tmp$hjust, inherit.aes = FALSE ) 
+```
+Con clara diferencia, como se puede observar, la más recurrente es Exectution.
+
+### By techniques
+```{r bytechniquesplot, echo=FALSE, fig.height=2, fig.width=2, warning=FALSE}
+#Techniques
+incidents2 <- incidents %>%
+  mutate(
+    paste = paste(id,"|",technique)
+  )
+bytechniques <- table(incidents2$paste)
+techniques <- as.data.frame(bytechniques)
+names(techniques)[names(techniques) == "Var1"] <- "technique"
+techniques<-within(techniques, technique<-data.frame(do.call('rbind', strsplit(as.character(technique), '|', fixed=TRUE))))
+names(techniques)[names(techniques) == "Freq"] <- "value"
+techniques$text <- paste("id: ",techniques$technique$X1, "\n","technique: ",techniques$technique$X2, "\n", "count:", techniques$value)
+# Generate the layout
+packing <- circleProgressiveLayout(techniques$value, sizetype='area')
+data <- cbind(techniques$technique$X1, packing)
+dat.gg <- circleLayoutVertices(packing, npoints=50)
+
+# Make the plot with a few differences compared to the static version:
+p<-ggplot() + 
+  geom_polygon_interactive(data = dat.gg, aes(x, y, group = id, fill=id, tooltip = techniques$text[id], data_id = id), colour = "black", alpha = 0.85, fontface="bold") +
+  scale_fill_viridis() +
+  geom_text(data = data, aes(x, y, label = gsub("Technique", "", techniques$technique$X1)), size=5, color="black") +
+  theme_void() + 
+  theme(legend.position="none", plot.margin=unit(c(0,0,0,0),"cm") ) + 
+  coord_equal() 
+# Turn it interactive
+widg <- ggiraph(ggobj = p, width_svg = 9, height_svg = 9,
+                options = list(
+                 opts_tooltip(use_fill = TRUE),
+                 opts_sizing(width = 0.7),
+                 opts_hover_inv(css = "opacity:0.2;")))
+  
+widg
+```
+
+###  By organisations
+
+```{r byorg, echo=FALSE}
+####ORg
+incidents3 <- incidents %>%
+  mutate(
+    paste = paste(industry,"|",org)
+  )
+byorg <- table(incidents3$paste)
+org <- as.data.frame(byorg)
+org<-within(org, Var1<-data.frame(do.call('rbind', strsplit(as.character(Var1), ' | ', fixed=TRUE))))
+org <- cbind(org$Freq, org$Var1$X1, org$Var1$X2)
+org <- as.data.frame(org)
+library(plotly)
+fig <- plot_ly(
+  type="treemap",
+  labels=org$V3,
+  parents=org$V2
+  )
+fig
+```
+
