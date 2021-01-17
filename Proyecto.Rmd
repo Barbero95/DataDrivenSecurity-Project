@@ -32,23 +32,26 @@ incidents <- readRDS(file = "data/incidents.rds")
 
 ## Packages
 Para la realización de este proyecto se usan los siguientes packages de r:
-```{r load_packages, echo=TRUE, results='hide'}
-suppressPackageStartupMessages(library("dplyr"))
+```{r load_packages, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+library("dplyr")
 library("tidyr")
-suppressPackageStartupMessages(library("tidyverse"))
+library("tidyverse")
 library("DataExplorer")
 library("ggridges")
 library("ggplot2")
 library("hrbrthemes")
 library("viridisLite")
 library("viridis")
-suppressPackageStartupMessages(library("dplyr"))
+library("dplyr")
 library("readr")
 library("packcircles")
 library("ggiraph")
-suppressPackageStartupMessages(library("Hmisc"))
+library("Hmisc")
 library("kableExtra")
-library("treemap")
+library("plotly")
+library("lubridate")
+library("data.table")
+library("formattable")
 ```
 
 # Análisis exploratorio de los incidentes
@@ -71,12 +74,127 @@ kbl(incidents) %>%
 ```
 (dataframe incidents obtenido)  
   
-  
+     
+     
 Ahora, podemos proceder a hacer una primera visión de cuanta información y de qué tipo se trata:  
 
 ```{r ds_incidents_summary, echo=FALSE, warning=FALSE, cache=TRUE}
 describe(incidents) %>% html()
 ```
+   
+   
+
+## Estudio de las variables cualitativas    
+
+### By first_event   
+   
+Para poder estudiar estas variables temporales, se ha decidido tratarlas como variables cuantitativas para su estudio. De ese modo, se ha optado por realizar, primeramente, un *bubbleplot* para ver qué meses o qué días del mes han sido más afectados.    
+
+```{r by1event, echo=FALSE, fig.height=5, fig.width=6.5, message=FALSE, warning=FALSE}
+fechas1 <- incidents[c(1)]
+fechas1$first_event_ts <- date(ymd_hms(fechas1$first_event_ts))
+fechas1$dia <- day(fechas1$first_event_ts)
+fechas1$mes <- month(fechas1$first_event_ts)
+fechas1 <- as.data.frame(table(fechas1[c(2,3)]))
+fechas1$dia<-as.numeric(fechas1$dia)
+fechas1$mes<-as.numeric(fechas1$mes)
+ggplot(fechas1, aes(x=mes, y=dia, size = Freq, fill=dia)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size(range = c(0, 25), name="Ataques por día") + 
+  scale_fill_viridis(begin = 0.5, end = 1) +
+  theme_ipsum() +
+  ylab("Día") +
+  xlab("Mes") +
+  theme(legend.position = "none")
+
+```
+    
+### By first_alert
+
+Para esta variable realizaremos exactamente el mismo gráfico pues se trata del mismo tipo de variable.
+
+```{r by1alert, echo=FALSE, fig.height=5, fig.width=6.5, message=FALSE, warning=FALSE}
+fechas2 <- incidents[c(2)]
+fechas2$first_alert_ts <- date(ymd_hms(fechas2$first_alert_ts))
+fechas2$dia <- day(fechas2$first_alert_ts)
+fechas2$mes <- month(fechas2$first_alert_ts)
+fechas2 <- as.data.frame(table(fechas2[c(2,3)]))
+fechas2$dia<-as.numeric(fechas2$dia)
+fechas2$mes<-as.numeric(fechas2$mes)
+ggplot(fechas2, aes(x=mes, y=dia, size = Freq, fill=dia)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size(range = c(0, 25), name="Ataques por día") + 
+  scale_fill_viridis(begin = 0, end = 0.5) +
+  theme_ipsum() +
+  ylab("Día") +
+  xlab("Mes") +
+  theme(legend.position = "none")
+
+```
+     
+Podemos oberservar que entre los gráficos de ***first_event*** y ***first_alert***, a simple vista, no hay diferencia alguna. Aun así, en el siguiente apartado se calculará la diferencia entre los dos.   
+
+## Inferencia estadística  
+Para ver si hay diferencias significativas entre estas dos variables presentadas, se 
+realiza el siguiente contraste de hipótesis:   
+
+![](images/inferencia_estadistica.png){height=80px}
+    
+Así, en la hipótesis nula supondremos que estas variables no presentan diferencias significativas y, si es refutada, entonces sí presentarán suficientes diferencias y las deberemos estudiar por separado de aquí en adelante.   
+
+De ese modo, procedemos a ver si podemos realizar este estadístico de contraste bilateral con $\alpha = 0.05$. Para comprobarlo debemos verificar la normalidad de nuestros datos de modo que realizamos un histograma en forma de puntos:
+
+```{r statshist}
+fechas1 <- incidents[c(1)]
+fechas1$first_event_ts <- date(ymd_hms(fechas1$first_event_ts))
+fechas2 <- incidents[c(2)]
+fechas2$first_alert_ts <- date(ymd_hms(fechas2$first_alert_ts))
+diffechas <- abs(difftime(fechas1$first_event_ts,fechas2$first_alert_ts,units=c("days")))
+diffechas<- as.data.frame(diffechas)
+diffechas$id = 1:length(diffechas$diffechas)
+```
+```{r plothist, echo=FALSE, message=FALSE, warning=FALSE}
+diffechas$col<-character(length(diffechas$diffechas))
+ax <- list(
+  title = ""
+)
+pal <- c("#55C667FF")
+figh <- plot_ly(diffechas, x = ~id, y = ~diffechas, name = 'Diferencia', type = 'scatter', mode = 'markers', color= ~col, colors = pal)
+figh <- figh %>% layout(xaxis = ax, yaxis = ax)
+figh
+```
+
+Podemos observar de manera muy clara que los datos no siguen una distribución normal de modo que no podremos realizar la inferencia estadística presentada. Aun así, podemos concluir que el los valores aislados no son favorables, es decir, ha habido un gran *delay* entre el día en el que se produjo el incidente y el día en el que se detectó. Veamos estos casos:   
+
+```{r grandiff, echo=FALSE, message=FALSE, warning=FALSE}
+grandiff <- filter( diffechas[c(1,2)], diffechas > 0)
+grandiff <- grandiff %>%
+    filter(!is.na(diffechas)) %>%
+    arrange(desc(diffechas)) %>%
+    mutate(id=factor(id, id))
+```
+```{r ojo, echo=FALSE, message=FALSE, warning=FALSE}
+delayedg <-as.data.frame(incidents[c(grandiff$id),c(4,5,7,8)])
+merge <- data.table::data.table(cbind(delayedg, grandiff$diffechas))
+formattable::formattable(merge)
+```
+     
+     
+Podemos observar que la industria de ***Manufacturing*** es la que más tarda en comparación a las otras en detectar estos incidentes.    
+Menospreciando estos casos recién presentados, podemos considerar que estas dos columnas son iguales (en todos los otros casos la diferencia nos da 0). Se debe considerar así porque no se ha podido realizar el test presentado anteriormente. De haber sido los datos normales se hubiese ejecutado lo siguiente:
+
+```{r statsbilat, echo=TRUE, results='hide'}
+t.test( diffechas$diffechas,
+        mu = 0, 
+        alternative = "two.sided" ) # contraste bilateral
+
+```
+
+
+
+### By containtment    
+
+
 
 ## Estudio de las variables cuantitativas
 
@@ -176,7 +294,7 @@ widg
 
 ###  By organisations
 
-```{r byorg, echo=FALSE}
+```{r byorg, echo=FALSE, message=FALSE, warning=FALSE}
 ####ORg
 incidents3 <- incidents %>%
   mutate(
@@ -187,12 +305,17 @@ org <- as.data.frame(byorg)
 org<-within(org, Var1<-data.frame(do.call('rbind', strsplit(as.character(Var1), ' | ', fixed=TRUE))))
 org <- cbind(org$Freq, org$Var1$X1, org$Var1$X2)
 org <- as.data.frame(org)
-library(plotly)
+indus  <- data.frame(lapply(indus, as.character), stringsAsFactors=FALSE)
+labels=c(indus$Var1, org$V3)
+parents=c(character(19), org$V2)
+
+
 fig <- plot_ly(
   type="treemap",
-  labels=org$V3,
-  parents=org$V2
+  labels=labels,
+  parents=parents
   )
+fig <- fig %>% layout(treemapcolorway=viridis(19, alpha = 1, begin = 0, end = 1, option = "D"))
 fig
 ```
 
