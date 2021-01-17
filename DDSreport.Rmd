@@ -2,6 +2,7 @@
 title: "Incident analysis based on MITRE standards"
 author: "Humbert Costas"
 date: "20/12/2020"
+runtime: shiny
 output: html_document
 ---
 
@@ -25,6 +26,7 @@ library("sjmisc")
 library("dplyr")
 library("visNetwork")
 library("kableExtra")
+library("shiny")
 ```
 
 ```{r install_mitre, echo=FALSE}
@@ -218,11 +220,13 @@ tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)]
 tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)]
 
 temp <- filter(incidents, incidents$id %in% tecCar)
-sort(summary(temp$id))
 qplot(x=id, data=temp)
 
 temp <- filter(incidents, incidents$id %in% tecAttack)
-sort(summary(temp$id))
+
+tecAttackSimpl <- as.data.frame(table(temp$id)[which(table(temp$id) > 300)])
+tecAttackSimpl <- tecAttackSimpl$Var1
+
 qplot(x=id, data=temp)
 
 ```
@@ -235,6 +239,13 @@ rowsInterToAttack <- which(mitre.data$mitrenet$edges$to %in% tecAttack)
 
 dfFromAttack <- mitre.data$mitrenet$edges[rowsInterFromAttack,]
 dfToAttack <-  mitre.data$mitrenet$edges[rowsInterToAttack,]
+
+#Son los parametros para el caso simplificado, dos tecnicas T1072 Y T1078
+rowsInterFromAttackSimpli <- which(mitre.data$mitrenet$edges$from %in% tecAttackSimpl)
+rowsInterToAttackSimpli <- which(mitre.data$mitrenet$edges$to %in% tecAttackSimpl)
+
+dfFromAttackSimpli <- mitre.data$mitrenet$edges[rowsInterFromAttackSimpli,]
+dfToAttackSimpli <-  mitre.data$mitrenet$edges[rowsInterToAttackSimpli,]
 ```
 
 
@@ -253,17 +264,31 @@ groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, descrip
 
 groupsAttackDescrip %>% kbl() %>% kable_styling()
 
+#TempNodes1 servirá para los casos siguientes, la vamos a reutilizar sin modificar
 tempNodes1 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tecAttack)
 tempNodes2 <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
 tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2$from)
 tempNodes <- rbind(tempNodes1, tempNodes2)
 
-tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, startsWith(as.character(mitre.data$standards$attck$attcknet$edges$from), "G"))
-tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
-#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttack)
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$from), "G"))
 
-myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
-myg
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+mygCompletaGroups <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletaGroups
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes1Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tecAttackSimpl)
+
+tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "G"))
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2Simplificado$from)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "G"))
+
+mygSimplificadoGroups <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoGroups
 ```
 
 ###Tacticas usadas
@@ -283,8 +308,19 @@ tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standa
 tempEdges <- filter(tempEdges, tempEdges$from %in% tecAttack)
 #He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
 
-myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
-myg
+mygCompletoTactics <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoTactics
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% dfFromAttackSimpli$to)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% dfFromAttackSimpli$to)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, tempEdgesSimplificado$from %in% tecAttackSimpl)
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+
+mygSimplificadoTactics <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoTactics
 
 #Hemos encontrado relación con tecnicas de shield desde las tacticas de Attack
 dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$edges$to %in% tactAttack$Var1),]
@@ -307,8 +343,19 @@ tempNodes <- rbind(tempNodes1, tempNodes2)
 tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$from %in% softwAttackList)
 tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
 
-myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
-myg
+mygCompletoSoft <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoSoft
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "S"))
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2Simplificado$from)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "S"))
+
+mygSimplificadoSoft <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoSoft
 
 length(mitre.data$standards$attck$software$mitreid)
 length(softwAttack$mitreid)
@@ -323,6 +370,26 @@ mitigationsAttackList <- mitigationsAttack$from
 mitigationsAttack <- filter(mitre.data$standards$attck$mitigation, mitre.data$standards$attck$mitigation$mitreid %in% mitigationsAttackList)
 mitigationsAttack <- select(mitigationsAttack, mitreid, name, description)
 mitigationsAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% mitigationsAttackList)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$from %in% mitigationsAttackList)
+tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
+
+mygCompletoSoft <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoSoft
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "M"))
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2Simplificado$from)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "M"))
+
+mygSimplificadoSoft <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoSoft
 
 length(mitre.data$standards$attck$mitigation$mitreid)
 length(mitigationsAttack$mitreid)
@@ -415,45 +482,7 @@ qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", 
 ```
 
 ##Tecnicas relacionadas con Car
-```{r techinques CAR}
-#Referente a CAR
-rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
-rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
 
-k <- mitre.data$mitrenet$edges[rowsInterFrom,]
-k2 <-  mitre.data$mitrenet$edges[rowsInterTo,]
-
-table(k$to) #lo mostramos más adelante
-
-#table(k$from)
-#table(k2$from)
-sort(table(k2$from)) #Podemos ver que el grupo G0045 tiene 4 y podemos decir que está detras de más ataques que los demás, tenemos más casos de 3
-
-k2Plot <- filter(k2, startsWith(as.character(k2$from), "G"))
-length(k2Plot$from)
-
-k2Plot <- k2Plot %>% mutate_if(is.character, as.factor)
-sort(summary(k2Plot$from))
-sort(table(k2Plot$from))
-k2Plot2 <- table(k2Plot$from)[which(table(k2Plot$from) > 2)]
-k2PlotDf <- data.frame(k2Plot2)
-#Dos graficas que generan lo mismo pero se ven distintas
-qplot(x=from, data=k2Plot[which(k2Plot$from %in% k2PlotDf$Var1),])
-k3 <- data.frame(to = k2$to, from = k2$from)
-
-k3 <- k3 %>% mutate_if(is.character, as.factor)
-
-#summary(k3$to) #vemos que la tecnica T1105 tiene 245 casos
-qplot(x = to, data = k3)
-k4 <- filter(k3, k3$to %in% c("T1105"))
-k4 <- k4 %>% mutate_if(is.character, as.factor)
-sort(table(k4$to)) #comprovamos que solo tenmeos rows de T1105
-sort(table(k4$from)) #aquí vemos que grupos y demás están con esta tecnica
-#podemos hacer esto para todos las demás tecnicas
-k5 <- filter(k4, startsWith(as.character(k4$from), "G")) #Extraemos todos los que son groups
-sort(table(k5$to)) #Aqu'i podemos ver que de las 245 casos, 41 son de grupos de ataques info guay para grafica
-sort(table(as.character(k5$from))) #Es para ver exactamente cuales son, hago el as.character para quitar todos los factors de las tablas anteriores (los G que tengan 0, S, M, etc)
-```
 
 ###organizaciones e industrias solamente de las 5 tecnicas encontradas en CAR
 ```{r incidents CAR: org, indus, tec}
