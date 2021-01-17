@@ -2,7 +2,6 @@
 title: "Incident analysis based on MITRE standards"
 author: "Humbert Costas"
 date: "20/12/2020"
-runtime: shiny
 output: html_document
 ---
 
@@ -26,7 +25,6 @@ library("sjmisc")
 library("dplyr")
 library("visNetwork")
 library("kableExtra")
-library("shiny")
 ```
 
 ```{r install_mitre, echo=FALSE}
@@ -220,14 +218,14 @@ tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)]
 tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)]
 
 temp <- filter(incidents, incidents$id %in% tecCar)
-qplot(x=id, data=temp)
+qplot(x=id, data=temp,fill=as.factor(id)) + labs(x = "Tecnicas", y = "Count") + theme( axis.title.x = element_text(color = "black", size = 14, face = "bold"), axis.title.y = element_text(color = "black", size = 14, face = "bold"))
 
 temp <- filter(incidents, incidents$id %in% tecAttack)
 
 tecAttackSimpl <- as.data.frame(table(temp$id)[which(table(temp$id) > 300)])
 tecAttackSimpl <- tecAttackSimpl$Var1
 
-qplot(x=id, data=temp)
+qplot(x=id, data=temp, fill=as.factor(id)) + labs(x = "Tecnicas", y = "Count") + theme( axis.title.x = element_text(color = "black", size = 14, face = "bold"), axis.title.y = element_text(color = "black", size = 14, face = "bold"))
 
 ```
 ##Tecnicas encontradas en Attack
@@ -255,9 +253,16 @@ dfToAttackSimpli <-  mitre.data$mitrenet$edges[rowsInterToAttackSimpli,]
 groupsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
 groupsAttack <- as.data.frame(table(groupsAttack$from))
 
-groupsAttackDf <- groupsAttack[which(groupsAttack$Freq > 2),]
+groupsAttackDf <- groupsAttack[which(groupsAttack$Freq > 3),]
 length(groupsAttackDf[[1]])
-qplot(x=Var1, y=Freq, data=groupsAttackDf)
+
+#La grafica y tabla sobre los grupos son de los má relevantes que salen más de 3 veces
+qplot(x=Var1, y=Freq, data=groupsAttackDf, fill=as.factor(Var1), color=as.factor(Var1)) + labs(x = "Groups", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
 
 groupsAttackDescrip <- unique(raw_attck$groups[which(raw_attck$groups$mitreid %in% groupsAttackDf$Var1),])
 groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, description)
@@ -377,8 +382,8 @@ tempNodes <- rbind(tempNodes1, tempNodes2)
 tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$from %in% mitigationsAttackList)
 tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
 
-mygCompletoSoft <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
-mygCompletoSoft
+mygCompletoMitigations <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoMitigations
 
 #Ahora con el caso simplificado: T1072 y T1078
 tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "M"))
@@ -388,8 +393,8 @@ tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
 tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
 tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "M"))
 
-mygSimplificadoSoft <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
-mygSimplificadoSoft
+mygSimplificadoMitigations <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoMitigations
 
 length(mitre.data$standards$attck$mitigation$mitreid)
 length(mitigationsAttack$mitreid)
@@ -397,7 +402,7 @@ length(mitigationsAttack$mitreid)
 
 ###Todas las relaciones con Shield
 ```{r Shield}
-#Continuamos etcnicas de shield
+#Continuamos tecnicas de shield
 dteAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "DTE"))
 dteAttack <- as.data.frame(table(dteAttack$from))
 
@@ -416,30 +421,145 @@ length(mitre.data$standards$shield$techniques$id)
 #Procedemos a extraer de from: DOS, DPR, DUC
 extracShield <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$from %in% rowsDTEShield$id),]
 
+extracShieldSimplificado <- filter(extracShield, extracShield$to %in% tecAttackSimpl)
+
+tempNodesDTE <- filter(mitre.data$standards$shield$shieldnet$nodes, mitre.data$standards$shield$shieldnet$nodes$id %in% rowsDTEShield$id)
+tempNodes <- rbind(tempNodes1, tempNodesDTE)
+
+tempEdges <- unique(plyr::ldply(
+    tecAttack, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDTE <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoShieldDTE
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(mitre.data$standards$shield$shieldnet$nodes, mitre.data$standards$shield$shieldnet$nodes$id %in% extracShieldSimplificado$from)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- unique(plyr::ldply(
+    tecAttackSimpl, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygSimplificadoShieldDTE <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "600px", width = "100%", main = "Esquema")
+mygSimplificadoShieldDTE
+```
+
+```{r Shield: DOS}
 ##DOS
 extracShieldDOS <- filter(extracShield, startsWith(as.character(extracShield$to), "DOS"))
 extracShieldDOSList <- extracShieldDOS$to
 extracShieldDOS <- filter(mitre.data$standards$shield$opportunities, mitre.data$standards$shield$opportunities$id %in% extracShieldDOSList)
 extracShieldDOS %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes <- unique(plyr::ldply(
+    extracShieldDOSList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldDOSList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDos <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoShieldDos
+
+#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
+tempNodes <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DOS"))
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DOS"))
+
+mygSimplificadoShieldDOS <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoShieldDOS
+
 length(extracShieldDOS$id)
 length(mitre.data$standards$shield$opportunities$id)
+```
 
+```{r Shield: DPR}
 ##DPR
 extracShieldDPR <- filter(extracShield, startsWith(as.character(extracShield$to), "DPR"))
 extracShieldDPRList <- extracShieldDPR$to
 extracShieldDPR <- filter(mitre.data$standards$shield$procedures, mitre.data$standards$shield$procedures$id %in% extracShieldDPRList)
 extracShieldDPR %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes <- unique(plyr::ldply(
+    extracShieldDPRList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldDPRList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDPR <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoShieldDPR
+
+#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
+tempNodes <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DPR"))
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DPR"))
+
+mygSimplificadoShieldDPR <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoShieldDPR
+
 length(extracShieldDPR$id)
 length(mitre.data$standards$shield$procedures$id)
+```
 
+```{r Shield: DUC}
 ##DUC
 extracShieldDUC <- filter(extracShield, startsWith(as.character(extracShield$to), "DUC"))
 extracShieldDUCList <- extracShieldDUC$to
 extracShieldDUC <- filter(mitre.data$standards$shield$usecases, mitre.data$standards$shield$usecases$id %in% extracShieldDUCList)
 extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes <- unique(plyr::ldply(
+    extracShieldDUCList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldDUCList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDUC <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoShieldDUC
+
+#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
+tempNodes <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DUC"))
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DUC"))
+
+mygSimplificadoShieldDUC <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoShieldDUC
+
 length(extracShieldDUC$id)
 length(mitre.data$standards$shield$usecases$id)
+```
 
+```{r Shield: DTA}
 #Procedemos a extraer de TO: DTA,
 extracShield2 <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$to %in% rowsDTEShield$id),]
 extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$from), "DTA"))
@@ -448,9 +568,35 @@ extracShieldDTA <- filter(mitre.data$standards$shield$tactics, mitre.data$standa
 extracShieldDTA <- select(extracShieldDTA, id, name, description)
 extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
 
+tempNodes <- unique(plyr::ldply(
+    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoShieldDTA
+
+#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
+tempNodes <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DTA"))
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$from), "DTA"))
+
+mygSimplificadoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoShieldDTA
+
 length(extracShieldDTA$id)
 length(mitre.data$standards$shield$tactics$id)
-
 
 #Referencias a Attack END-------------------------------------------------------
 
@@ -507,11 +653,19 @@ qplot(x=org, data=orgCar2, fill=as.factor(org)) + labs(x = "Organitzations", y =
      axis.title.y = element_text(color = "black", size = 14, face = "bold")
 )
 ```
-###Grupos que estan detrás, a paritr de las tecnicas encontradas en CAR
-```{r groups}
 
-groups <- raw_attck$groups[which(raw_attck$groups$mitreid %in% k2PlotDf$Var1),]
-groups <- dplyr::select(groups, mitreid, name, description)
+###Grupos que estan detrás, a paritr de las tecnicas encontradas en CAR
+```{r groups CAR}
+temp <- unique(plyr::ldply(
+  tecCar, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
+))
+
+temp <- filter(temp, startsWith(as.character(temp$from), "G"))
+
+table(temp$from) %>% kbl() %>% kable_styling()
+
+groups <- raw_attck$groups[which(raw_attck$groups$mitreid %in% unique(temp$from)),]
+groups <- select(groups, mitreid, name, description)
 
 groups %>% kbl() %>% kable_styling()
 ```
