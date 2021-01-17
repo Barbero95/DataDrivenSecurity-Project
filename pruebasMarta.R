@@ -93,3 +93,29 @@ fig <- plot_ly(
   labels=org$v3,
   parents=org$v2)
 fig
+
+library(lubridate)
+fechas1 <- incidents[c(1)]
+fechas2 <- incidents[c(2)]
+fechas1$first_event_ts <- date(ymd_hms(fechas1$first_event_ts))
+fechas2$first_alert_ts <- date(ymd_hms(fechas1$first_alert_ts))
+fechas1$dia <- day(fechas1$first_event_ts)
+fechas1$mes <- month(fechas1$first_event_ts)
+fechas1 <- as.data.frame(table(fechas1[c(2,3)]))
+fechas1$dia<-as.numeric(fechas1$dia)
+fechas1$mes<-as.numeric(fechas1$mes)
+p1 <- ggplot(fechas1, aes(x=mes, y=dia, size = Freq, fill=dia)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size(range = c(.01, 5.4), name="Ataques por día") +
+  scale_fill_viridis() +
+  theme_ipsum() +
+  theme(legend.position="bottom") +
+  ylab("Día") +
+  xlab("Mes") +
+  theme(legend.position = "none") +
+  scale_x_continuous(labels=as.character(x),breaks=x)
+p1
+pp <- ggplotly(p, tooltip="text")
+pp
+
+
