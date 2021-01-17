@@ -252,7 +252,20 @@ groupsAttackDescrip <- unique(raw_attck$groups[which(raw_attck$groups$mitreid %i
 groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, description)
 
 groupsAttackDescrip %>% kbl() %>% kable_styling()
+
+tempNodes1 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tecAttack)
+tempNodes2 <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2$from)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, startsWith(as.character(mitre.data$standards$attck$attcknet$edges$from), "G"))
+tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+
+myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+myg
 ```
+
 ###Tacticas usadas
 ```{r tacticas en Attack}
 #Continuamos por tacticas
@@ -263,10 +276,21 @@ rowsTactAttack <- mitre.data$standards$attck$tactics[which(mitre.data$standards$
 rowsTactAttackDescrip <- dplyr::select(rowsTactAttack, mitreid, name, description)
 rowsTactAttackDescrip %>% kbl() %>% kable_styling()
 
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tactAttack$Var1)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tactAttack$Var1)
+tempEdges <- filter(tempEdges, tempEdges$from %in% tecAttack)
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+
+myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+myg
+
 #Hemos encontrado relación con tecnicas de shield desde las tacticas de Attack
 dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$edges$to %in% tactAttack$Var1),]
 dteExtractFromTactAttack <- filter(dteExtractFromTactAttack, startsWith(as.character(dteExtractFromTactAttack$from), "DTE"))
 ```
+
 ###Softwares usados
 ```{r softwares attack}
 #Continuamos por Software
@@ -276,6 +300,15 @@ softwAttackList <- softwAttack$from
 softwAttack <- filter(mitre.data$standards$attck$software, mitre.data$standards$attck$software$mitreid %in% softwAttackList)
 softwAttack <- select(softwAttack, mitreid, name, description)
 softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% softwAttackList)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$from %in% softwAttackList)
+tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
+
+myg <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+myg
 
 length(mitre.data$standards$attck$software$mitreid)
 length(softwAttack$mitreid)
@@ -382,7 +415,7 @@ qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", 
 ```
 
 ##Tecnicas relacionadas con Car
-```{r incidents Attack: org, indus, tec}
+```{r techinques CAR}
 #Referente a CAR
 rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
 rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
@@ -455,7 +488,7 @@ groups %>% kbl() %>% kable_styling()
 ```
 
 ##Analisis entero sobre la tecnica más usada referente a CAR ("T1078")
-```{r groups}
+```{r T1078}
 inod <- unique(plyr::ldply(
   c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
 ))
@@ -469,7 +502,7 @@ myg
 ```
 
 ##Analisis entero sobre la tecnica más usada referente a Attack ("T1072")
-```{r groups}
+```{r T1072}
 inod <- unique(plyr::ldply(
   c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
 ))
