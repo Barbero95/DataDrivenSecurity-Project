@@ -198,22 +198,48 @@ __TODO: Actualizar y completar el modelo__
 
 ## ¿Sería posible predecir ataques?
 
-```{r david}
+
+#No se que poner de título a esta sección
+
+##Extracción de técnicas
+
+Primero de todo extraemos todas las tecnicas que encontramos en el fichero incidents y procedemos a investigar de estas tecnicas cuales se encuentran en Attack y en CAR(hace referencia a tecnicas de Attack). Una vez analizado observamos que encontramos que de las 28 diferentes tecnicas que hay en el fichero de incidentes, 16 se ecnuentran en Attack como no deprecadas, las que se encuentran depecradas decidimos no indagar. Y en el caso de CAR se encuentran solamente 5.
+
+```{r extract techniques}
 ids <- as.character(unique(incidents$id)) #las tecnicas que se han usado durante los ataques, 28 diferentes
 
-tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)] #Tecnicas encontradas en car 5
+#Tecnicas encontradas en car 5
+tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)] 
 
-tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)] #Tecnicas encontradas en attack 16
+#Tecnicas encontradas en attack 16
+tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)] 
 
-tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)] #Tecnicas encontradas en toda la red de mitre 16
+#Tecnicas encontradas en toda la red de mitre 16
+tecAll <- ids[which(ids %in% mitre.data$mitrenet$edges$from)]
 
-#Referencias a Attack -------------------------------------------------------
+temp <- filter(incidents, incidents$id %in% tecCar)
+sort(summary(temp$id))
+qplot(x=id, data=temp)
+
+temp <- filter(incidents, incidents$id %in% tecAttack)
+sort(summary(temp$id))
+qplot(x=id, data=temp)
+
+```
+##Tecnicas encontradas en Attack
+
+Con las 16 tecnicas encontradas procedemos a buscar que relaciones tiene. Buscamos en las columnas form y to de los edges de Attack.
+```{r Attack}
 rowsInterFromAttack <- which(mitre.data$mitrenet$edges$from %in% tecAttack)
 rowsInterToAttack <- which(mitre.data$mitrenet$edges$to %in% tecAttack)
 
 dfFromAttack <- mitre.data$mitrenet$edges[rowsInterFromAttack,]
 dfToAttack <-  mitre.data$mitrenet$edges[rowsInterToAttack,]
+```
 
+
+###Grupos que están detrás, sobre las tecnicas encontradas en Attack
+```{r Groups en Attack}
 #Empezamos por Groups
 groupsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
 groupsAttack <- as.data.frame(table(groupsAttack$from))
@@ -226,7 +252,9 @@ groupsAttackDescrip <- unique(raw_attck$groups[which(raw_attck$groups$mitreid %i
 groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, description)
 
 groupsAttackDescrip %>% kbl() %>% kable_styling()
-
+```
+###Tacticas usadas
+```{r tacticas en Attack}
 #Continuamos por tacticas
 tactAttack <- as.data.frame(table(dfFromAttack$to))
 
@@ -235,9 +263,40 @@ rowsTactAttack <- mitre.data$standards$attck$tactics[which(mitre.data$standards$
 rowsTactAttackDescrip <- dplyr::select(rowsTactAttack, mitreid, name, description)
 rowsTactAttackDescrip %>% kbl() %>% kable_styling()
 
+#Hemos encontrado relación con tecnicas de shield desde las tacticas de Attack
 dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$edges$to %in% tactAttack$Var1),]
 dteExtractFromTactAttack <- filter(dteExtractFromTactAttack, startsWith(as.character(dteExtractFromTactAttack$from), "DTE"))
+```
+###Softwares usados
+```{r softwares attack}
+#Continuamos por Software
 
+softwAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "S"))
+softwAttackList <- softwAttack$from
+softwAttack <- filter(mitre.data$standards$attck$software, mitre.data$standards$attck$software$mitreid %in% softwAttackList)
+softwAttack <- select(softwAttack, mitreid, name, description)
+softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+length(mitre.data$standards$attck$software$mitreid)
+length(softwAttack$mitreid)
+```
+
+###Mitigaciones
+```{r mitigations attack}
+#Continuamos por Mitigations
+
+mitigationsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "M"))
+mitigationsAttackList <- mitigationsAttack$from
+mitigationsAttack <- filter(mitre.data$standards$attck$mitigation, mitre.data$standards$attck$mitigation$mitreid %in% mitigationsAttackList)
+mitigationsAttack <- select(mitigationsAttack, mitreid, name, description)
+mitigationsAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+length(mitre.data$standards$attck$mitigation$mitreid)
+length(mitigationsAttack$mitreid)
+```
+
+###Todas las relaciones con Shield
+```{r Shield}
 #Continuamos etcnicas de shield
 dteAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "DTE"))
 dteAttack <- as.data.frame(table(dteAttack$from))
@@ -245,7 +304,7 @@ dteAttack <- as.data.frame(table(dteAttack$from))
 rowsDTEShield <- mitre.data$standards$shield$techniques[which(mitre.data$standards$shield$techniques$id %in% dteAttack$Var1),]
 length(rowsDTEShield[[1]])
 rowsDTEShieldDescrip <- dplyr::select(rowsDTEShield, id, name, description)
-rowsDTEShieldDescrip %>% kbl() %>% kable_styling()
+rowsDTEShieldDescrip %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
 
 #tecnicas shield encontradas con las tacticas
 rowsDTEShieldFromTactics <- mitre.data$standards$shield$techniques[which(mitre.data$standards$shield$techniques$id %in% dteExtractFromTactAttack$from),]
@@ -256,33 +315,74 @@ length(mitre.data$standards$shield$techniques$id)
 
 #Procedemos a extraer de from: DOS, DPR, DUC
 extracShield <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$from %in% rowsDTEShield$id),]
+
+##DOS
 extracShieldDOS <- filter(extracShield, startsWith(as.character(extracShield$to), "DOS"))
-length(extracShieldDOS)[[1]]
-length(unique(extracShieldDOS$to))
+extracShieldDOSList <- extracShieldDOS$to
+extracShieldDOS <- filter(mitre.data$standards$shield$opportunities, mitre.data$standards$shield$opportunities$id %in% extracShieldDOSList)
+extracShieldDOS %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+length(extracShieldDOS$id)
+length(mitre.data$standards$shield$opportunities$id)
+
+##DPR
 extracShieldDPR <- filter(extracShield, startsWith(as.character(extracShield$to), "DPR"))
-length(extracShieldDPR[[1]])
-length(unique(extracShieldDPR$to))
+extracShieldDPRList <- extracShieldDPR$to
+extracShieldDPR <- filter(mitre.data$standards$shield$procedures, mitre.data$standards$shield$procedures$id %in% extracShieldDPRList)
+extracShieldDPR %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+length(extracShieldDPR$id)
+length(mitre.data$standards$shield$procedures$id)
+
+##DUC
 extracShieldDUC <- filter(extracShield, startsWith(as.character(extracShield$to), "DUC"))
-length(extracShieldDUC[[1]])
-length(unique(extracShieldDUC$to))
+extracShieldDUCList <- extracShieldDUC$to
+extracShieldDUC <- filter(mitre.data$standards$shield$usecases, mitre.data$standards$shield$usecases$id %in% extracShieldDUCList)
+extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+length(extracShieldDUC$id)
+length(mitre.data$standards$shield$usecases$id)
 
 #Procedemos a extraer de TO: DTA,
 extracShield2 <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$to %in% rowsDTEShield$id),]
 extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$from), "DTA"))
-length(unique(extracShieldDTA$from))
+extracShieldDTAList <- extracShieldDTA$from
+extracShieldDTA <- filter(mitre.data$standards$shield$tactics, mitre.data$standards$shield$tactics$id %in% extracShieldDTAList)
+extracShieldDTA <- select(extracShieldDTA, id, name, description)
+extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
 
-#Continuamos por Software
+length(extracShieldDTA$id)
+length(mitre.data$standards$shield$tactics$id)
 
-sofwAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "S"))
-sofwAttack <- sort(table(sofwAttack$from))
 
-mAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "M"))
-mAttack <- sort(table(mAttack$from))
 #Referencias a Attack END-------------------------------------------------------
 
+```
 
+###organizaciones e industrias solamente de las 16 tecnicas encontradas en Attack
+```{r incidents Attack: org, indus, tec}
+incidentsAttack <- incidents[which(incidents$id %in% tecAttack),]
+incidentsAttack <- dplyr::select(incidentsAttack, id, technique, tactic, org, industry)
+#qplot(x=org, data=incidentsAttack)
+qplot(x=industry, data=incidentsAttack, fill = as.factor(industry)) + labs(x = "Industries", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
 
+orgAttack <- data.frame(table(incidentsAttack$org))
+#orgAttack1 <- dplyr::filter(orgAttack, Freq >= 10) #Queden moltes organitzacions i la grafica es fa infumable
+orgAttack2 <- dplyr::filter(orgAttack, Freq >= 20) # lo he acotado a superar el count de 20
+#qplot(x=Var1, y=Freq, data=orgAttack2)
+orgAttack3 <- incidentsAttack[which(incidentsAttack$org %in% orgAttack2$Var1),]
+qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", y = "Count") + theme(
+     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+     axis.text.x=element_blank(),
+     axis.ticks.x=element_blank(),
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+)
+```
 
+##Tecnicas relacionadas con Car
+```{r incidents Attack: org, indus, tec}
 #Referente a CAR
 rowsInterFrom <- which(mitre.data$mitrenet$edges$from %in% tecCar)
 rowsInterTo <- which(mitre.data$mitrenet$edges$to %in% tecCar)
@@ -320,34 +420,9 @@ sort(table(k4$from)) #aquí vemos que grupos y demás están con esta tecnica
 k5 <- filter(k4, startsWith(as.character(k4$from), "G")) #Extraemos todos los que son groups
 sort(table(k5$to)) #Aqu'i podemos ver que de las 245 casos, 41 son de grupos de ataques info guay para grafica
 sort(table(as.character(k5$from))) #Es para ver exactamente cuales son, hago el as.character para quitar todos los factors de las tablas anteriores (los G que tengan 0, S, M, etc)
-
-
 ```
 
-```{r incidents Attack: org, indus, tec}
-incidentsAttack <- incidents[which(incidents$id %in% tecAttack),]
-incidentsAttack <- dplyr::select(incidentsAttack, id, technique, tactic, org, industry)
-#qplot(x=org, data=incidentsAttack)
-qplot(x=industry, data=incidentsAttack, fill = as.factor(industry)) + labs(x = "Industries", y = "Count") + theme(
-     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
-     axis.text.x=element_blank(),
-     axis.ticks.x=element_blank(),
-     axis.title.y = element_text(color = "black", size = 14, face = "bold")
-)
-
-orgAttack <- data.frame(table(incidentsAttack$org))
-#orgAttack1 <- dplyr::filter(orgAttack, Freq >= 10) #Queden moltes organitzacions i la grafica es fa infumable
-orgAttack2 <- dplyr::filter(orgAttack, Freq >= 20) # lo he acotado a superar el count de 20
-#qplot(x=Var1, y=Freq, data=orgAttack2)
-orgAttack3 <- incidentsAttack[which(incidentsAttack$org %in% orgAttack2$Var1),]
-qplot(x=org, data=orgAttack3, fill=as.factor(org)) + labs(x = "Organitzations", y = "Count") + theme(
-     axis.title.x = element_text(color = "black", size = 14, face = "bold"),
-     axis.text.x=element_blank(),
-     axis.ticks.x=element_blank(),
-     axis.title.y = element_text(color = "black", size = 14, face = "bold")
-)
-```
-
+###organizaciones e industrias solamente de las 5 tecnicas encontradas en CAR
 ```{r incidents CAR: org, indus, tec}
 incidentsCar <- incidents[which(incidents$id %in% tecCar),]
 incidentsCar <- dplyr::select(incidentsCar, id, technique, tactic, org, industry)
@@ -370,11 +445,39 @@ qplot(x=org, data=orgCar2, fill=as.factor(org)) + labs(x = "Organitzations", y =
      axis.title.y = element_text(color = "black", size = 14, face = "bold")
 )
 ```
-
+###Grupos que estan detrás, a paritr de las tecnicas encontradas en CAR
 ```{r groups}
 
 groups <- raw_attck$groups[which(raw_attck$groups$mitreid %in% k2PlotDf$Var1),]
 groups <- dplyr::select(groups, mitreid, name, description)
 
 groups %>% kbl() %>% kable_styling()
+```
+
+##Analisis entero sobre la tecnica más usada referente a CAR ("T1078")
+```{r groups}
+inod <- unique(plyr::ldply(
+  c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+iedg <- unique(plyr::ldply(
+  c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
+))
+
+myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)
+myg
+```
+
+##Analisis entero sobre la tecnica más usada referente a Attack ("T1072")
+```{r groups}
+inod <- unique(plyr::ldply(
+  c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+iedg <- unique(plyr::ldply(
+  c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
+))
+
+myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)
+myg
 ```
