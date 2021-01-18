@@ -15,6 +15,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+if (!dir.exists("data")) dir.create("data")
+if (!dir.exists("data-raw")) dir.create("data-raw")
 ```
 
 # Objetivo
@@ -25,33 +27,76 @@ Para poder llevar a cabo este estudio se dispone de datasets que nos han sido pr
 
 ## Datasets
 ```{r ds_mitre and ds_incidents, echo=TRUE, warning=FALSE, cache=TRUE, results='hide'}
-mitre.data <- readRDS(file = "data/mitredata.rds")
-#mitre.data <- mitre::getLatestDataSet()
+#mitre.data <- readRDS(file = "data/mitredata.rds")
+mitre.data <- mitre::getLatestDataSet()
 incidents <- readRDS(file = "data/incidents.rds")
 ```
 
+## Standards
+
+Para poder resolver esta práctica, se han estudiado previamente los diferentes estándares con los que más adelante se trabajará para poder sacar conclusiones de los incidentes presentados.   
+Los estándares son los que se presentan a continuación. En el link que se proporciona se puede aprender en qué consisten y qué información nos proporcionan.
+
+### CVE 
+[https://cve.mitre.org/about/](https://cve.mitre.org/about/)
+```{r ds_cve, echo=FALSE, message=FALSE, warning=FALSE}
+raw_cves <- mitre.data$standards$cve
+```
+### CWE
+[https://github.com/martavilab/DataDrivenSecurity/blob/main/CWE/CWE.md](https://github.com/martavilab/DataDrivenSecurity/blob/main/CWE/CWE.md)
+```{r ds_cwe, echo=FALSE, message=FALSE, warning=FALSE}
+raw_cwes <- mitre.data$standards$cwe
+```
+### ATT&CK
+[https://github.com/ivannin49/DataDriven_Attack/blob/main/README.md](https://github.com/ivannin49/DataDriven_Attack/blob/main/README.md")
+```{r ds_attck, echo=FALSE, message=FALSE, warning=FALSE}
+raw_attck <- mitre.data$standards$attck
+```
+### SHIELD
+[https://shield.mitre.org/](https://shield.mitre.org/)
+```{r ds_shield, echo=FALSE, message=FALSE, warning=FALSE}
+raw_shield <- mitre.data$standards$shield
+```
+### CPE
+[https://github.com/DanielPulidoSC/DataDrivenSecurity/blob/main/CPE.md](https://github.com/DanielPulidoSC/DataDrivenSecurity/blob/main/CPE.md)
+```{r ds_cpe, echo=FALSE, message=FALSE, warning=FALSE}
+raw_cpes <- mitre.data$standards$cpe
+```
+### CAR
+[https://github.com/Barbero95/DataDrivenSecurity-CAR](https://github.com/Barbero95/DataDrivenSecurity-CAR)
+```{r ds_car, echo=FALSE, message=FALSE, warning=FALSE}
+raw_car <- mitre.data$standards$car
+```
+
+### CAPEC
+[https://github.com/danielorihuela/DataDrivenSecurity/blob/master/capec.md](https://github.com/danielorihuela/DataDrivenSecurity/blob/master/capec.md)
+
 ## Packages
 Para la realización de este proyecto se usan los siguientes packages de r:
-```{r load_packages, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
-library("dplyr")
-library("tidyr")
-library("tidyverse")
-library("DataExplorer")
-library("ggridges")
-library("ggplot2")
-library("hrbrthemes")
-library("viridisLite")
-library("viridis")
-library("dplyr")
-library("readr")
-library("packcircles")
-library("ggiraph")
-library("Hmisc")
-library("kableExtra")
-library("plotly")
-library("lubridate")
-library("data.table")
-library("formattable")
+```{r l_p, echo=FALSE, message=FALSE, warning=FALSE}
+# ipak function: install and load multiple R packages.
+# check to see if packages are installed. Install them if they are not, then load them into the R session.
+ipak <- function(pkg){
+new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+sapply(pkg, require, character.only = TRUE)
+}
+```
+
+```{r load_packages, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+packages <- c("ggplot2", "dplyr", "tidyr", "tidyverse", "DataExplorer", "ggridges", "hrbrthemes", "viridisLite", "viridis", "readr", "packcircles", "ggiraph", "Hmisc", "kableExtra", "lubridate", "plotly", "data.table", "formattable", "visNetwork", "knitr", "sjmisc", "mitre", "rworldmap", "stringr")
+ipak(packages)
+pa<-data.table(packages)
+cc<-as.integer(length(packages)/3)
+pa1<-pa[1:cc]
+pa2<- pa[(cc+1):(2*cc)]
+pa3<- pa[(2*cc+1):length(packages)]
+```
+```{r pack, echo=FALSE, message=FALSE, warning=FALSE}
+options(knitr.kable.NA = '')
+knitr::kable(list(pa1, pa2, pa3),col.names = NULL, caption = "Required:") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"))
 ```
 
 # Análisis exploratorio de los incidentes
@@ -71,7 +116,7 @@ incidents <- dplyr::distinct(incidents)
 ```
 ```{r ds_incidents_ver, echo=FALSE, warning=FALSE, cache=TRUE}
 kbl(incidents) %>%
-  kable_paper() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed")) %>%
   scroll_box(width = "800px", height = "200px")
 ```
 (dataframe incidents obtenido)   
@@ -490,5 +535,282 @@ Podemos observar que la técnica más común, la **T1072** es la que presenta lo
 
 Por lo que respecta a otras relaciones, podemos observar que, por ejemplo, en las industrias ***Information*** y ***Professional*** una técnica recurrente es ***T1078***.
 
-# ¿Quién está detrás de los ataques?
+# ¿Quién estaba detras de los ataques?
 
+## Extracción de técnicas
+
+Primero de todo, extraemos todas las técnicas que encontramos en el fichero *incidents* y procedemos a investigar cuales de estas técnicas se encuentran en ATT&CK y en CAR (Standard que hace referencia a técnicas de ATT&CK).  
+
+```{r extract_techniques_car, echo=TRUE, message=FALSE, warning=FALSE}
+#ids: 28 técnicas que se han usado durante los ataques
+ids <- as.character(unique(incidents$id)) 
+
+#Técnicas encontradas en CAR
+tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)] 
+```
+```{r extract_techniques_car2, echo=FALSE, message=FALSE, warning=FALSE}
+temp <- filter(incidents, incidents$id %in% tecCar)
+qplot(x=id, data=temp,fill=as.factor(id)) + labs(x = "Técnicas", y = "Count") + theme( axis.title.x = element_text(color = "black", size = 12, face = "bold"), axis.title.y = element_text(color = "black", size = 14, face = "bold")) + scale_fill_manual(values=viridis(5, alpha = 1, begin = 0, end = 0.5, option = "D")) + theme_ipsum() + labs(fill = 'ids')
+```
+
+Vemos que detecta 5 técnicas entre las cuales se encuentra la segunda más común entre los ataques que estamos estudiando, la técnica ***T1078***.
+
+```{r extract_techniques_attack, echo=TRUE, message=FALSE, warning=FALSE}
+#Técnicas encontradas en ATT&CK 
+tecAttack <- ids[which(ids %in% raw_attck$techniques$mitreid)] 
+```
+
+```{r extract_techniques_attack2, echo=FALSE, message=FALSE, warning=FALSE}
+temp <- filter(incidents, incidents$id %in% tecAttack)
+qplot(x=id, data=temp, fill=as.factor(id)) + labs(x = "Tecnicas", y = "Count") + theme( axis.title.x = element_text(color = "black", size = 14, face = "bold"), axis.title.y = element_text(color = "black", size = 14, face = "bold")) + scale_fill_manual(values=viridis(16, alpha = 1, begin = 0, end = 1, option = "D")) + theme_ipsum() + labs(fill = 'ids') + theme(axis.text.x = element_text(angle = 90))
+```
+
+Observamos que, de las 28 diferentes técnicas que hay en el fichero de *incidents*, 16 se encuentran en Attack como no deprecadas. Ahora sí observamos la técnica más común, ***T1072***.   
+
+A continuación estudiaremos si es correcto seguir este estudio con las 16 halladas en ATT&CK no considerando las técnicas deprecadas. Para hacerlo, estudiaremos la relevancia de las 12 técnicas que no detectamos en nuestros ataques de estudio.
+
+```{r compr, echo=TRUE, message=FALSE, warning=FALSE}
+inc <- incidents
+inc[] <- lapply(inc, as.character)
+inc$id[inc$id %in% tecAttack]<-"TATT&CK"
+```
+```{r comprplot, echo=FALSE, message=FALSE, warning=FALSE}
+pie<-as.data.frame(table(inc$id))
+colrs <- viridis(13, alpha=0.9, begin=1, end=0.15)
+pc <- pie %>% plot_ly(labels = ~Var1, values = ~Freq, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = colrs,
+                      line = list(color = 'white', width = 1)),
+        showlegend = FALSE,
+       hole= 0.3)
+pc
+```
+
+Podemos observar que con el estudio sin las técnicas deprecadas cubrimos un 66.7% de los ataques de modo que se considera correcto seguir únicamente con estos. Cabe decir que, en caso de querer mejor la exactitud se podrían estudiar las técnicas *T1086* y *T1192* cubriendo, así, el 92% de los incidentes del estudio.  
+
+## Extracción de información de las técnicas
+
+A partir de las técnicas con las que trabajaremos (las no deprecadas) sacamos la información que nos ofrece el standard de ATT&CK.
+
+```{r Attack, echo=TRUE, message=FALSE, warning=FALSE}
+rowsInterFromAttack <- which(mitre.data$mitrenet$edges$from %in% tecAttack)
+rowsInterToAttack <- which(mitre.data$mitrenet$edges$to %in% tecAttack)
+
+dfFromAttack <- mitre.data$mitrenet$edges[rowsInterFromAttack,]
+dfToAttack <-  mitre.data$mitrenet$edges[rowsInterToAttack,]
+
+#Parámetros para el caso simplificado: solo técnicas T1072 y T1078
+tecAttackSimpl <- as.data.frame(table(temp$id)[which(table(temp$id) > 70)])
+tecAttackSimpl <- tecAttackSimpl$Var1
+rowsInterFromAttackSimpli <- which(mitre.data$mitrenet$edges$from %in% tecAttackSimpl)
+rowsInterToAttackSimpli <- which(mitre.data$mitrenet$edges$to %in% tecAttackSimpl)
+
+dfFromAttackSimpli <- mitre.data$mitrenet$edges[rowsInterFromAttackSimpli,]
+dfToAttackSimpli <-  mitre.data$mitrenet$edges[rowsInterToAttackSimpli,]
+```
+
+## Grupos detrás de los ataques
+
+Para poder ver quién ha realizado estos ataques estudiaremos los grupos que están relacionados con las técnicas no deprecadas.
+
+```{r Groups_Attack, echo=TRUE, message=FALSE, warning=FALSE}
+#Empezamos por Groups
+groupsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
+groupsAttack <- as.data.frame(table(groupsAttack$from))
+#Estudio de esos grupos con más presencia
+groupsAttackDf <- groupsAttack[which(groupsAttack$Freq > 3),]
+```
+```{r Groups_Attack2, echo=FALSE, message=FALSE, warning=FALSE}
+#La grafica y tabla sobre los grupos son de los má relevantes que salen más de 3 veces
+qplot(x=Var1, y=Freq, data=groupsAttackDf, fill=as.factor(Var1), color=as.factor(Var1)) + labs(x = "Groups", y = "Count") + theme(
+     axis.title.y = element_text(color = "black", size = 14, face = "bold")
+) + scale_fill_manual(values=viridis(20, alpha = 1, begin = 0, end = 1, option = "D")) + scale_color_manual(values=viridis(20, alpha = 1, begin = 0, end = 1, option = "D"))+ theme_ipsum() + theme(axis.text.x = element_text(angle = 90)) + ylim(1,7) +  geom_segment( aes(x=Var1, xend=Var1, y=1, yend=Freq)) + labs(fill = 'groups', color='groups')
+```
+
+Observamos que el grupo prioritario es ***G0096***. Todos estos grupos son los principales grupos que están detrás de los ataques de modo que, a continuación, se muestra una tabla con más información acerca de estos:
+
+```{r groups_Attack_tabla, echo=FALSE, message=FALSE, warning=FALSE}
+groupsAttackDescrip <- unique(raw_attck$groups[which(raw_attck$groups$mitreid %in% groupsAttackDf$Var1),])
+groupsAttackDescrip <- dplyr::select(groupsAttackDescrip, mitreid, name, description)
+
+groupsAttackDescrip %>% kbl() %>% kable_styling()
+```
+
+### Procedencia de los ataques {.tabset}
+
+Una vez vistos los grupos que realizan los ataques estudiamos su procedencia para ver desde trabajan estos grupos.
+
+```{r map, echo=TRUE, message=FALSE, warning=FALSE}
+#Origen de los grupos extraídos de la tabla/internet
+groups_orig <- c("Russia", "China", "Northkorea", "Russia", "India", "China", "Iran","Vietnam", "Thailand", "China", "Russia", "Russia", "China", "China", "Russia", "China")
+```
+
+#### World Map
+```{r map2, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#https://renenyffenegger.ch/notes/development/languages/R/packages/rworldmap/index
+groups_count <- groupsAttackDf$Freq
+grr<-strrep(groups_orig, groups_count)
+grr<-str_extract_all(grr, "[A-Z][a-z]*")
+grr<-as.data.frame(table(unlist(grr)))
+grr$Var1<-c("CHN", "IND", "IRN", "PRK", "RUS", "THA", "VNM")
+gMap <- joinCountryData2Map(grr, joinCode = "ISO3",
+  nameJoinColumn = "Var1")
+```
+
+```{r map3, echo=FALSE, message=FALSE, warning=FALSE}
+mapCountryData(gMap, nameColumnToPlot="Freq", catMethod = "discrete",
+  missingCountryCol = gray(.8), colourPalette = viridis(7, alpha=0.8, begin=0.9, end=0.15), mapTitle="")
+```
+
+Podemos ver que la mayoría de ataques se realizan desde **China** y **Rusia**. 
+
+#### Values
+```{r tablemap, echo=FALSE, message=FALSE, warning=FALSE}
+grr$Var1<-c("China", "India", "Iran", "North Korea", "Russia", "Thailand", "Vietnam")
+grr2<-data.table(grr)
+kbl(grr2) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+Podemos ver que la mayoría de ataques se realizan desde **China** y **Rusia**. 
+
+
+### Asociación técnicas - grupos
+
+Ya vistos los grupos que han realizado los ataques, vamos a estudiar con qué técnicas están relacionados cada uno de ellos. Cabe mencionar que hay técnicas que no tienen grupos asociados de modo que, en estos casos, se ha optado por no asociar ningún grupo directamente a esas técnicas. La justificación de esta decisión radica en el hecho de que la representación gráfica de esta asociación ya es de por sí suficientemente engorrosa. Por lo tanto, si añadiésemos las subtécnicas también sería imposible observar ningún tipo de relación.
+
+```{r graph1, message=FALSE, warning=FALSE, include=FALSE}
+#TempNodes1 servirá para los casos siguientes, la vamos a reutilizar sin modificar
+tempNodes1 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tecAttack)
+tempNodes1$color <- viridis(length(tempNodes1$color), alpha=0.9, begin=0.05, end=0.95)
+tempNodes1$shape <- rep("diamond", length(tempNodes1$color))
+tempNodes1$value <- rep(2, length(tempNodes1$color))
+tempNodes2 <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "G"))
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2$from)
+tempNodes2$color <- rep("#B7B7B7", length(tempNodes2$color))
+tempNodes2$shape <- rep("ellipse", length(tempNodes2$color))
+tempNodes2$value <- rep(1, length(tempNodes2$color))
+tempNodes <- rbind(tempNodes2, tempNodes1)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttack)
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$from), "G"))
+```
+```{r graph1.2, echo=FALSE, message=FALSE, warning=FALSE}
+#S
+mygCompletaGroups <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%")%>%
+  visOptions(selectedBy = "id", 
+             highlightNearest = TRUE, 
+             nodesIdSelection = TRUE) %>%
+  visPhysics(stabilization = TRUE)
+visEdges(mygCompletaGroups, color="lightgrey", label = "")
+
+```
+
+Como se puede observar, queda un grafo caótico. Es por ese motivo que, por un lado, se pueden ir modificando los valores de los nodos para ver mejor las relaciones y, por otro, se ha decidio repetir el grafo solamente teniendo en cuenta las dos técnicas principales: ***T1072*** y ***T1078***.
+
+#### Caso simplificado: T1072 y T1078
+
+```{r graph2, echo=FALSE, message=FALSE, warning=FALSE}
+tempNodes1Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tecAttackSimpl)
+tempNodes1Simplificado$color <- viridis(length(tempNodes1Simplificado$color), alpha=0.9, begin=0.05, end=0.95)
+tempNodes1Simplificado$shape <- rep("diamond", length(tempNodes1Simplificado$color))
+tempNodes1Simplificado$value <- rep(4, length(tempNodes1Simplificado$color))
+
+tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "G"))
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2Simplificado$from)
+tempNodes2Simplificado$color <- rep("#B7B7B7", length(tempNodes2Simplificado$color))
+tempNodes2Simplificado$shape <- rep("ellipse", length(tempNodes2Simplificado$color))
+tempNodes2Simplificado$value <- rep(1, length(tempNodes2Simplificado$color))
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "G"))
+
+mygSimplificadoGroups <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%")
+visEdges(mygSimplificadoGroups, color="lightgrey", label = "")
+```
+
+# ¿Cuál fue el objetivo?
+
+YO CREO QUE AQUI TENEMOS QUE PONER QUE HACE CADA TÉCNICA(?)
+
+# ¿Cómo realizaron los ataques?
+
+Para estudiar como se realizaron estos ataques se estudiarán las tácticas que fueron llevadas a cabo y los softwares usados. 
+
+## Tácticas usadas
+
+```{r tacticas en Attack, echo=FALSE, message=FALSE, warning=FALSE}
+#Continuamos por tacticas
+tactAttack <- as.data.frame(table(dfFromAttack$to))
+
+rowsTactAttack <- mitre.data$standards$attck$tactics[which(mitre.data$standards$attck$tactics$mitreid %in% tactAttack$Var1),]
+
+rowsTactAttackDescrip <- dplyr::select(rowsTactAttack, mitreid, name, description)
+rowsTactAttackDescrip %>% kbl() %>% kable_styling()
+
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tactAttack$Var1)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tactAttack$Var1)
+tempEdges <- filter(tempEdges, tempEdges$from %in% tecAttack)
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+
+mygCompletoTactics <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoTactics
+```
+
+```{r t_e_A_simpl, echo=FALSE, message=FALSE, warning=FALSE}
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% dfFromAttackSimpli$to)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% dfFromAttackSimpli$to)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, tempEdgesSimplificado$from %in% tecAttackSimpl)
+#He hecho la comprovación con T1053 no tiene groups asociados a el, pero si subtecnicas suyas, las debo añadir?
+
+mygSimplificadoTactics <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoTactics
+
+#Hemos encontrado relación con tecnicas de shield desde las tacticas de Attack
+dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$edges$to %in% tactAttack$Var1),]
+dteExtractFromTactAttack <- filter(dteExtractFromTactAttack, startsWith(as.character(dteExtractFromTactAttack$from), "DTE"))
+```
+
+##Softwares usados
+
+```{r softwares attack}
+#Continuamos por Software
+
+softwAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "S"))
+softwAttackList <- softwAttack$from
+softwAttack <- filter(mitre.data$standards$attck$software, mitre.data$standards$attck$software$mitreid %in% softwAttackList)
+softwAttack <- select(softwAttack, mitreid, name, description)
+softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+
+tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% softwAttackList)
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$from %in% softwAttackList)
+tempEdges <- filter(tempEdges, tempEdges$to %in% tecAttack)
+
+mygCompletoSoft <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "100%", main = "Esquema")
+mygCompletoSoft
+
+#Ahora con el caso simplificado: T1072 y T1078
+tempNodes2Simplificado <- filter(dfToAttackSimpli, startsWith(as.character(dfToAttackSimpli$from), "S"))
+tempNodes2Simplificado <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tempNodes2Simplificado$from)
+tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
+
+tempEdgesSimplificado <- filter(mitre.data$standards$attck$attcknet$edges, mitre.data$standards$attck$attcknet$edges$to %in% tecAttackSimpl)
+tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(tempEdgesSimplificado$from), "S"))
+
+mygSimplificadoSoft <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%", main = "Esquema")
+mygSimplificadoSoft
+
+length(mitre.data$standards$attck$software$mitreid)
+length(softwAttack$mitreid)
+```
