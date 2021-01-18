@@ -698,18 +698,64 @@ myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", widt
 myg
 ```
 
-## Plataformas que han sido afectadas a partir de las tecncias encontradas en CAR (5tecnicas)
-```{r platforms}
+## objetivos de los atacantes, a partir de las 5 tecnicas extraidas en CAR
+```{r objetivos}
 #Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
 tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
+tempCarEdges <- select(tempCarEdges, from, to)
 #Obtenemos los fiecheros que nos interesan, procedemos a revisar las plataformas afectadas
 tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$analytics$id %in% tempCarEdges$from)
+tempCar <- select(tempCar, id, subtypes, description)
 
-tempCarSelected <- select(tempCar, subtypes, description, implementations)
+tempCar <- plyr::ldply(tempCar$id, function(y) {
+  print(y)
+  t <- tempCar[which(tempCar$id == y),]
+  tech <- tempCarEdges$to[which(tempCarEdges$from == y)]
+  tech <- data.frame( techniques = tech)
+  cbind(t, tech)
+})
+tempCar <- select(tempCar, id, techniques, subtypes, description)
 
-tempCarSelected %>% kbl() %>% kable_styling()
+tempCar %>% kbl() %>% kable_styling()
 
+```
+
+## Plataformas que han sido afectadas a partir de las tecncias encontradas en CAR (5tecnicas)
+```{r platforms}
 tempPlatforms <- summarise(tempCar, windows = sum(platform_windows, na.rm = TRUE), linux = sum(platform_linux, na.rm = TRUE), macos = sum(platform_macos, na.rm = TRUE))
 
-tempPlatforms
+tempPlatforms <- gather(tempPlatforms, "platform", "count", 1:3)
+#tempPlatforms
+
+colors <- viridis(3, begin=0.25, end=0.75)
+plotPlatforms <- plot_ly(tempPlatforms, labels = ~platform, values = ~count, type = 'pie',
+                         marker = list(colors = colors, line = list(color = 'white', width = 1))) 
+
+plotPlatforms <- plotPlatforms %>% layout(title = 'Sistemas operativos',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+plotPlatforms
+
+
+```
+
+## A partir de las tecnicas extraidas de Car, podemos ver implementaciones y pseudocodigo para prevenir y actuar contra ataques que usen el mismo patron
+```{r implementations}
+#Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
+tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
+tempCarEdges <- select(tempCarEdges, from, to)
+#Obtenemos los fiecheros que nos interesan, procedemos a revisar las plataformas afectadas
+tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$analytics$id %in% tempCarEdges$from)
+tempCar <- select(tempCar, id, implementations)
+
+tempCar <- plyr::ldply(tempCar$id, function(y) {
+  t <- tempCar[which(tempCar$id == y),]
+  tech <- tempCarEdges$to[which(tempCarEdges$from == y)]
+  tech <- data.frame( techniques = tech)
+  cbind(t, tech)
+})
+tempCar <- select(tempCar, id, techniques, implementations)
+
+tempCar %>% kbl() %>% kable_styling()
 ```
