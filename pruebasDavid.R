@@ -3,6 +3,62 @@ library(sjmisc)
 library(dplyr)
 library(visNetwork)
 
+#library(maps)
+#library(mapdata)
+#library(ggplot2)
+#library(ggrepel)
+#library(tidyverse)
+
+# Guardamos la información en un nuevo dataframe llamado mapa_mundo
+
+#options(scipen = 999) # para evitar la anotación científica
+
+# Graficamos indicando
+
+#mapa_mundo <- map_data("world")
+#incidents_map <- data.frame(
+#  long = c(-95.712891),
+#  lat = c(37.09024),
+#  group = c("USA"),
+#  count = 5
+#)
+
+#mapa_mundo %>%
+#  ggplot() +
+#  geom_polygon(aes( x= long, y = lat, group = group),
+#               fill = "grey80",
+#               color = "white") +
+#  geom_point(data= incidents_map,
+#             aes(x=long, y = lat, size = count),
+#             stroke = F) +
+#  scale_size_continuous(name = "Count") +
+#  ggtitle( "Incidentes")
+
+library(rworldmap)
+
+theCountries <- c("DEU", "COD", "BFA")
+# These are the ISO3 names of the countries you'd like to plot in red
+
+## Create multiple color codes, with Burkina Faso in its own group
+malDF <- data.frame(country = c("DEU", "COD", "BFA"),
+                    malaria = c(1, 1, 2))
+
+## Re-merge
+malMap <- joinCountryData2Map(malDF, joinCode = "ISO3",
+                              nameJoinColumn = "country")
+
+## Specify the colourPalette argument
+mapCountryData(malMap, nameColumnToPlot="malaria", catMethod = "categorical",
+               missingCountryCol = gray(.8), colourPalette = c("red", "blue"))
+# And this will plot it, with the trick that the color palette's first
+# color is red
+
+
+
+
+
+
+
 ids <- as.character(unique(incidents$id))
 
 tecCar <- ids[which(ids %in% raw_car$carnet$edges$to)]

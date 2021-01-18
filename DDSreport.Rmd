@@ -697,3 +697,19 @@ iedg <- unique(plyr::ldply(
 myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)
 myg
 ```
+
+## Plataformas que han sido afectadas a partir de las tecncias encontradas en CAR (5tecnicas)
+```{r platforms}
+#Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
+tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
+#Obtenemos los fiecheros que nos interesan, procedemos a revisar las plataformas afectadas
+tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$analytics$id %in% tempCarEdges$from)
+
+tempCarSelected <- select(tempCar, subtypes, description, implementations)
+
+tempCarSelected %>% kbl() %>% kable_styling()
+
+tempPlatforms <- summarise(tempCar, windows = sum(platform_windows, na.rm = TRUE), linux = sum(platform_linux, na.rm = TRUE), macos = sum(platform_macos, na.rm = TRUE))
+
+tempPlatforms
+```
