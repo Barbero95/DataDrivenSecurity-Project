@@ -7,7 +7,7 @@ output:
     toc: true
     toc_float: true
     toc_collapsed: true
-    toc_depth: 3
+    toc_depth: 4
     number_sections: true
     theme: yeti
     
@@ -66,24 +66,25 @@ incidents <- incidents %>% unnest(mitre_attack)
 apply(incidents, 2, function(x) length(unique(x)))
 incidents <- incidents %>%
   mutate_if(is.character, as.factor)
+#Eliminamos duplicados
 incidents <- dplyr::distinct(incidents)
 ```
 ```{r ds_incidents_ver, echo=FALSE, warning=FALSE, cache=TRUE}
 kbl(incidents) %>%
   kable_paper() %>%
-  scroll_box(width = "500px", height = "200px")
+  scroll_box(width = "800px", height = "200px")
 ```
-(dataframe incidents obtenido)  
-  
-     
-     
+(dataframe incidents obtenido)   
+<br><br>
 Ahora, podemos proceder a hacer una primera visión de cuanta información y de qué tipo se trata:  
+<br>
 
 ```{r ds_incidents_summary, echo=FALSE, warning=FALSE, cache=TRUE}
-Hmisc::describe(incidents) %>% html()
+d<-Hmisc::describe(incidents)
+html(d, size=100, scroll=TRUE)
 ```
    
-   
+<br><br>
 
 ## Estudio de las variables cualitativas    
 
@@ -408,6 +409,86 @@ widg
 Podemos observar que la técnica más usada es la ***T1072*** que corresponde a ***Third-party Software*** con count de 136. Por lo tanto, representa un 27,9% de los incidentes del estudio.    
 
 ## Relaciones entre variables y visión global
+En este apartado se estudiarán las posibles relaciones entre nuestras variables. Cabe decir que las técnicas, tácticas y ids ya están relacionados entre ellos por razones lógicas y que, por otro lado, la relación entre empresas y industrias es impuesta de modo que tampoco se revisará.
+
+### Relación Industria - First_event
+
+```{r r1, echo=FALSE, message=FALSE, warning=FALSE}
+# Ref: https://www.r-graph-gallery.com/294-basic-ridgeline-plot.html
+
+ggplot(incidents, aes(x = first_event_ts, y = industry, fill = industry)) +
+  geom_density_ridges() +
+  theme_ipsum() + 
+  theme(legend.position = "none") +
+  scale_fill_manual(values=viridis(20, alpha = 1, begin = 0, end = 1, option = "D"))
+```
+
+Podemos ver que entre los meses de abril y septiembre es cuando se producen más incidentes.   
+
+### Relación Industria - Duración {.tabset}
+
+Como hemos visto anteriormente, tenemos dos *outliers* cuya duración es extremadamente elevada así que se han realizado dos gráficos, uno con todas las duraciones y el otro eliminando los outliers.
 
 
+#### Completo
+
+Todos los incidentes en cuenta:
+```{r r2.1, echo=FALSE, message=FALSE, warning=FALSE}
+# Ref: https://www.r-graph-gallery.com/320-the-basis-of-bubble-plot.html
+inci <- incidents %>% arrange(desc(first_event_ts))
+dur$industry <- inci$industry
+dur$tactic <- inci$tactic
+dur$industry <- rev(dur$industry)
+dur$tactic <- rev(dur$tactic)
+ggplot(dur, aes(x=fecha, y=industry, size=dur, fill=tactic)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size(range = c(.1, 20), name="Duration") +
+    scale_fill_viridis(discrete=TRUE, guide=FALSE, option="D") +
+    theme_ipsum() +
+    theme(legend.position="bottom") +
+    ylab("Industry") +
+    xlab("Incidents") +
+    theme(legend.position = "none")
+```
+
+
+#### Excluyendo Outliers
+
+Solo en cuenta los incidentes con duración inferior a 20 días:
+```{r r2.2, echo=FALSE, message=FALSE, warning=FALSE}
+# Ref: https://www.r-graph-gallery.com/320-the-basis-of-bubble-plot.html
+inci <- incidents %>% arrange(desc(first_event_ts))
+dur$industry <- inci$industry
+dur$tactic <- inci$tactic
+dur$industry <- rev(dur$industry)
+dur$tactic <- rev(dur$tactic)
+dura <- filter( dur, dur < 20)
+ggplot(dura, aes(x=fecha, y=industry, size=dur, fill=tactic)) +
+  geom_point(alpha=0.5, shape=21, color="black") +
+  scale_size(range = c(.1, 10), name="Duration") +
+    scale_fill_viridis(discrete=TRUE, guide=FALSE, option="D") +
+    theme_ipsum() +
+    theme(legend.position="bottom") +
+    ylab("Industry") +
+    xlab("Incidents") +
+    theme(legend.position = "none")
+```
+
+### Estudio de posible correlación entre id y industria
+A continuación se estudia la posibilidad de que un tipo de ataque sea más predominante en algun tipo de industria con un nivel de significación de 0,1.
+
+```{r r3, echo=FALSE, message=FALSE, warning=FALSE}
+tacind <-as.data.frame(table(incidents[c(7,8)]))
+ggplot(tacind, aes(id, industry, fill= Freq)) + 
+  geom_tile() +
+  scale_fill_viridis(begin=0.2, end=1, discrete=FALSE) +
+  theme_ipsum() + 
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+Podemos observar que la técnica más común, la **T1072** es la que presenta los cuadrados más claros puesto que, al ser la más usada, es la que más se repite entre industrias.   
+
+Por lo que respecta a otras relaciones, podemos observar que, por ejemplo, en las industrias ***Information*** y ***Professional*** una técnica recurrente es ***T1078***.
+
+# ¿Quién está detrás de los ataques?
 
