@@ -85,7 +85,7 @@ sapply(pkg, require, character.only = TRUE)
 ```
 
 ```{r load_packages, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
-packages <- c("ggplot2", "dplyr", "tidyr", "tidyverse", "DataExplorer", "ggridges", "hrbrthemes", "viridisLite", "viridis", "readr", "packcircles", "ggiraph", "Hmisc", "kableExtra", "lubridate", "plotly", "data.table", "formattable", "visNetwork", "knitr", "sjmisc", "mitre", "rworldmap", "stringr")
+packages <- c("ggplot2", "dplyr", "tidyr", "tidyverse", "DataExplorer", "ggridges", "hrbrthemes", "viridisLite", "viridis", "readr", "packcircles", "ggiraph", "Hmisc", "kableExtra", "lubridate", "plotly", "data.table", "formattable", "visNetwork", "knitr", "sjmisc", "mitre", "rworldmap", "stringr", "maps")
 ipak(packages)
 pa<-data.table(packages)
 cc<-as.integer(length(packages)/3)
@@ -752,7 +752,7 @@ tactAttack <- as.data.frame(table(dfFromAttack$to))
 rowsTactAttack <- mitre.data$standards$attck$tactics[which(mitre.data$standards$attck$tactics$mitreid %in% tactAttack$Var1),]
 
 rowsTactAttackDescrip <- dplyr::select(rowsTactAttack, mitreid, name, description)
-rowsTactAttackDescrip %>% kbl() %>% kable_styling()
+rowsTactAttackDescrip %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 
 tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% tactAttack$Var1)
 tempNodes <- rbind(tempNodes1, tempNodes2)
@@ -782,7 +782,7 @@ dteExtractFromTactAttack <- mitre.data$mitrenet$edges[which(mitre.data$mitrenet$
 dteExtractFromTactAttack <- filter(dteExtractFromTactAttack, startsWith(as.character(dteExtractFromTactAttack$from), "DTE"))
 ```
 
-##Softwares usados
+## Softwares usados
 
 ```{r softwares attack, echo=FALSE, message=FALSE, warning=FALSE}
 #Continuamos por Software
@@ -791,7 +791,7 @@ softwAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from), "S")
 softwAttackList <- softwAttack$from
 softwAttack <- filter(mitre.data$standards$attck$software, mitre.data$standards$attck$software$mitreid %in% softwAttackList)
 softwAttack <- select(softwAttack, mitreid, name, description)
-softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 
 tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% softwAttackList)
 tempNodes <- rbind(tempNodes1, tempNodes2)
@@ -813,13 +813,14 @@ tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(t
 mygSimplificadoSoft <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "100%")
 mygSimplificadoSoft
 
-length(mitre.data$standards$attck$software$mitreid)
-length(softwAttack$mitreid)
+#length(mitre.data$standards$attck$software$mitreid)
+#length(softwAttack$mitreid)
 ```
 
 # ¿Qué podemos hacer para prevenir futuros ataques?
 
 ## Mitigaciones
+
 ```{r mitigations attack, echo=FALSE, message=FALSE, warning=FALSE}
 #Continuamos por Mitigations
 
@@ -827,7 +828,7 @@ mitigationsAttack <- filter(dfToAttack, startsWith(as.character(dfToAttack$from)
 mitigationsAttackList <- mitigationsAttack$from
 mitigationsAttack <- filter(mitre.data$standards$attck$mitigation, mitre.data$standards$attck$mitigation$mitreid %in% mitigationsAttackList)
 mitigationsAttack <- select(mitigationsAttack, mitreid, name, description)
-mitigationsAttack %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+mitigationsAttack %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 
 tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% mitigationsAttackList)
 tempNodes <- rbind(tempNodes1, tempNodes2)
@@ -867,9 +868,10 @@ dteAttack <- as.data.frame(table(dteAttack$from))
 rowsDTEShield <- mitre.data$standards$shield$techniques[which(mitre.data$standards$shield$techniques$id %in% dteAttack$Var1),]
 length(rowsDTEShield[[1]])
 rowsDTEShieldDescrip <- dplyr::select(rowsDTEShield, id, name, description)
-rowsDTEShieldDescrip %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+rowsDTEShieldDescrip %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 
 ```
+<br><br>
 
 #### General
 
@@ -913,14 +915,18 @@ mygSimplificadoShieldDTE
 
 ### DOS {.tabset}
 
-#### General
 ```{r Shield: DOS, echo=TRUE, message=FALSE, warning=FALSE}
 ##DOS
 extracShieldDOS <- filter(extracShield, startsWith(as.character(extracShield$to), "DOS"))
 extracShieldDOSList <- extracShieldDOS$to
 extracShieldDOS <- filter(mitre.data$standards$shield$opportunities, mitre.data$standards$shield$opportunities$id %in% extracShieldDOSList)
-extracShieldDOS %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+extracShieldDOS %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
+
+<br><br>
+
+#### General
+
 
 ```{r DOS, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 tempNodes <- unique(plyr::ldply(
@@ -936,6 +942,7 @@ mygCompletoShieldDos
 ```
 
 #### Simplificado
+
 ```{r Shield:DOS:Simpl, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 
 #Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
@@ -960,14 +967,18 @@ length(mitre.data$standards$shield$opportunities$id)
 
 ### DPR {.tabset}
 
-#### General
 ```{r Shield: DPR, echo=TRUE}
 ##DPR
 extracShieldDPR <- filter(extracShield, startsWith(as.character(extracShield$to), "DPR"))
 extracShieldDPRList <- extracShieldDPR$to
 extracShieldDPR <- filter(mitre.data$standards$shield$procedures, mitre.data$standards$shield$procedures$id %in% extracShieldDPRList)
-extracShieldDPR %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+extracShieldDPR %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
+
+<br><br>
+
+#### General
+
 
 ```{r DPR, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 tempNodes <- unique(plyr::ldply(
@@ -983,6 +994,7 @@ mygCompletoShieldDPR
 ```
 
 #### Simplificado
+
 ```{r shield:DPR:Simpl, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 #Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
 tempNodes <- unique(plyr::ldply(
@@ -1006,14 +1018,18 @@ length(mitre.data$standards$shield$procedures$id)
 
 ### DUC {.tabset}
 
-#### General
 ```{r Shield: DUC, echo=TRUE}
 #Extraemos DUC
 extracShieldDUC <- filter(extracShield, startsWith(as.character(extracShield$to), "DUC"))
 extracShieldDUCList <- extracShieldDUC$to
 extracShieldDUC <- filter(mitre.data$standards$shield$usecases, mitre.data$standards$shield$usecases$id %in% extracShieldDUCList)
-extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
+
+<br><br>
+
+#### General
+
 
 ```{r DUC, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 tempNodes <- unique(plyr::ldply(
@@ -1029,6 +1045,7 @@ mygCompletoShieldDUC
 ```
 
 #### Simplificado
+
 ```{r shiled:DUC:Simpl, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 #Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
 tempNodes <- unique(plyr::ldply(
@@ -1059,10 +1076,12 @@ extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$f
 extracShieldDTAList <- extracShieldDTA$from
 extracShieldDTA <- filter(mitre.data$standards$shield$tactics, mitre.data$standards$shield$tactics$id %in% extracShieldDTAList)
 extracShieldDTA <- select(extracShieldDTA, id, name, description)
-extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(width = "900px", height = "300px")
+extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
 
-### General
+<br> <br> 
+
+#### General
 
 ```{r DTA:GEN, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 tempNodes <- unique(plyr::ldply(
@@ -1078,6 +1097,7 @@ mygCompletoShieldDTA
 ```
 
 #### Simplificado
+
 ```{r shield:DTA:simpl, echo=FALSE, message=FALSE, warning=FALSE}
 #Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
 tempNodes <- unique(plyr::ldply(
@@ -1100,6 +1120,7 @@ length(mitre.data$standards$shield$tactics$id)
 ```
 
 # Análisis completo sobre la técnica más usada: ***T1072***
+
 ```{r T1072, echo=FALSE, message=FALSE, warning=FALSE}
 inod <- unique(plyr::ldply(
   c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
