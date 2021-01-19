@@ -714,7 +714,8 @@ tempCar <- plyr::ldply(tempCar$id, function(y) {
   tech <- data.frame( techniques = tech)
   cbind(t, tech)
 })
-tempCar <- select(tempCar, id, techniques, subtypes, description)
+tempCar <- mutate(tempCar, objectives = str_split(gsub("[^=A-Za-z,0-9{} ]+","",tempCar$subtypes),"(?<=\\}),\\s*"))
+tempCar <- select(tempCar, id, techniques, objectives, description)
 
 tempCar %>% kbl() %>% kable_styling()
 
@@ -756,7 +757,36 @@ tempCar <- plyr::ldply(tempCar$id, function(y) {
   tech <- data.frame( techniques = tech)
   cbind(t, tech)
 })
+
+
+#limpio los casos que no tienen implementaciones, {}
+tempCar <- filter(tempCar, tempCar$implementations != "{}")
+
+library("RJSONIO")
+#tempCar <- mutate(tempCar, implementations=str_split(gsub("[^=A-Za-z,0-9{} ]+","",tempCar$implementations),"(?<=\\}),\\s*"))
+
 tempCar <- select(tempCar, id, techniques, implementations)
 
+j=0
+while (j < length(tempCar$implementations)){
+  j=j+1
+  temp <- lapply(tempCar$implementations[j], function(x){
+    fromJSON(x)
+  })
+  tempCar$implementations[j] <- temp
+}
+
+t2 <- plyr::ldply(tempCar$implementations, function(y) {
+  t3 <- plyr::ldply(y, function(z) {
+    data.frame(z)
+  })
+  t3
+})
+
+tempCar <- mutate(tempCar, implementations=unlist(tempCar$implementations))
+
+
 tempCar %>% kbl() %>% kable_styling()
+
+
 ```
