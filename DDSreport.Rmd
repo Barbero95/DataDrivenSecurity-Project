@@ -25,6 +25,7 @@ library("sjmisc")
 library("dplyr")
 library("visNetwork")
 library("kableExtra")
+library("plotly")
 ```
 
 ```{r install_mitre, echo=FALSE}
@@ -708,7 +709,6 @@ tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$a
 tempCar <- select(tempCar, id, subtypes, description)
 
 tempCar <- plyr::ldply(tempCar$id, function(y) {
-  print(y)
   t <- tempCar[which(tempCar$id == y),]
   tech <- tempCarEdges$to[which(tempCarEdges$from == y)]
   tech <- data.frame( techniques = tech)
@@ -722,7 +722,8 @@ tempCar %>% kbl() %>% kable_styling()
 
 ## Plataformas que han sido afectadas a partir de las tecncias encontradas en CAR (5tecnicas)
 ```{r platforms}
-tempPlatforms <- summarise(tempCar, windows = sum(platform_windows, na.rm = TRUE), linux = sum(platform_linux, na.rm = TRUE), macos = sum(platform_macos, na.rm = TRUE))
+tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$analytics$id %in% tempCarEdges$from)
+tempPlatforms <- summarise(tempCar, windows = sum(tempCar$platform_windows, na.rm = TRUE), linux = sum(tempCar$platform_linux, na.rm = TRUE), macos = sum(tempCar$platform_macos, na.rm = TRUE))
 
 tempPlatforms <- gather(tempPlatforms, "platform", "count", 1:3)
 #tempPlatforms

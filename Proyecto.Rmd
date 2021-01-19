@@ -919,16 +919,23 @@ tempEdgesSimplificado <- filter(tempEdgesSimplificado, startsWith(as.character(t
 
 mygSimplificadoMitigations <- visNetwork::visNetwork(nodes = tempNodesSimplificado, edges = tempEdgesSimplificado, height = "500px", width = "90%")
 mygSimplificadoMitigations
-
-length(mitre.data$standards$attck$mitigation$mitreid)
-#length(mitigationsAttack$mitreid)
 ```
 
 # ¿Cómo podemos protegernos?
 
+<br>
+Para este punto nos hemos decantado por usar el estandard de shield para hacer frente a los ataques. De tal manera que a partir de las tecnicas usadas (TE), buscamos que tecnica defensiva se encuentra (DTE) para poder hacer frente.
+<br>
+
 ## Todas las relaciones con Shield 
 
+<br>
+Una vez tenemos todas las tecnicas defensivas (DTE) relacionadas con las tecnicas que se han usado durante los ataques procedemos a extrarer las relaciones de estas DTEs con las tacticas defensivas (DTA), oportunidades defensivas (DOS),
+casos de uso (DUC) y procedimiento defensivos (DPR).
+<br>
+
 ### DTE {.tabset}
+
 
 ```{r Shield, echo=TRUE, message=FALSE, warning=FALSE}
 #Encontramos relación con técnicas de Shield desde las tácticas de Attack
@@ -943,13 +950,16 @@ rowsDTEShield <- mitre.data$standards$shield$techniques[which(mitre.data$standar
 ```
 
 <br>
-Los diferentes DTEs obtenidos son:
+En la siguiente tabla podemos ver en detalle las técnicas defensivas que se han encontrado y una breve descripción sobre como actuar que se complementa con las tacticas (DTA), oportunidades (DOS), casos de uso (DUC) y como proceder (DPR) que veremos en los siguientes puntos.
 <br>
+
 ```{r dte_t, echo=FALSE, message=FALSE, warning=FALSE}
 #length(rowsDTEShield[[1]])
 rowsDTEShieldDescrip <- dplyr::select(rowsDTEShield, id, name, description)
 rowsDTEShieldDescrip %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
+<br>
+A continuación podemos ver la relación entre las técnicas defensivas y las técnicas usadas durante los incidentes:
 <br>
 
 #### General
@@ -993,6 +1003,66 @@ mygSimplificadoShieldDTE <- visNetwork::visNetwork(nodes = tempNodesSimplificado
 mygSimplificadoShieldDTE
 ```
 
+### DTA {.tabset}
+
+```{r DTA, echo=TRUE, message=FALSE, warning=FALSE}
+#Procedemos a extraer DTA
+extracShield2 <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$to %in% rowsDTEShield$id),]
+extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$from), "DTA"))
+extracShieldDTAList <- extracShieldDTA$from
+extracShieldDTA <- filter(mitre.data$standards$shield$tactics, mitre.data$standards$shield$tactics$id %in% extracShieldDTAList)
+extracShieldDTA <- select(extracShieldDTA, id, name, description)
+
+```
+
+<br> 
+Una vez encontradas las tecnicas defensivas procedemos a relacionarlas con las tacticas defensivas para cada uno de los casos y se clasifican en la siguiente tabla.
+<br> 
+
+```{r DTA_t, echo=FALSE, message=FALSE, warning=FALSE}
+extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
+```
+
+<br> 
+Procedemos a obverar la relación entre las DETs encontradas y las tacticas a seguir (DTAs):
+<br> 
+
+#### General
+
+```{r DTA:GEN, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+tempNodes <- unique(plyr::ldply(
+    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+
+mygCompletoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
+mygCompletoShieldDTA
+```
+
+#### Simplificado
+
+```{r shield:DTA:simpl, echo=FALSE, message=FALSE, warning=FALSE}
+#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
+tempNodes <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
+))
+tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DTA"))
+tempNodes <- rbind(tempNodes1, tempNodes2)
+
+tempEdges <- unique(plyr::ldply(
+    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
+))
+tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$from), "DTA"))
+
+mygSimplificadoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
+mygSimplificadoShieldDTA
+
+```
+
 ### DOS {.tabset}
 
 ```{r Shield: DOS, echo=TRUE, message=FALSE, warning=FALSE}
@@ -1003,13 +1073,15 @@ extracShieldDOS <- filter(mitre.data$standards$shield$opportunities, mitre.data$
 ```
 
 <br>
-Obtenemos los siguientes DOS:
+A partir de las DTEs encontradas podemos obtener las oportunidades defensivas para cada uno de los casos y en la siguiente tabla las podemos ver con una breve descripción de la oportunidad.
 <br>
 
 ```{r DOS_t, echo=FALSE, message=FALSE, warning=FALSE}
 extracShieldDOS %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
 
+<br>
+A continaución podemos apreciar la relación de cada oportunidad defensiva con su tecnica defensiva.
 <br>
 
 #### General
@@ -1047,9 +1119,6 @@ tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DOS"))
 
 mygSimplificadoShieldDOS <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
 mygSimplificadoShieldDOS
-
-length(extracShieldDOS$id)
-length(mitre.data$standards$shield$opportunities$id)
 ```
 
 ### DPR {.tabset}
@@ -1062,13 +1131,15 @@ extracShieldDPR <- filter(mitre.data$standards$shield$procedures, mitre.data$sta
 ```
 
 <br>
-Los DPRs obtenidos son:
+Los procedimientos a seguir con cada DTE encontrado se han agrupado en la siguiente tabla y son los siguientes:
 <br>
 
 ```{r DPR_t, echo=FALSE, message=FALSE, warning=FALSE}
 extracShieldDPR %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
 
+<br>
+Procedemos a ver de forma visual los diferentes procedimientos a seguir con cada DTE encontrado:
 <br>
 
 #### General
@@ -1105,9 +1176,6 @@ tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DPR"))
 
 mygSimplificadoShieldDPR <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
 mygSimplificadoShieldDPR
-
-length(extracShieldDPR$id)
-length(mitre.data$standards$shield$procedures$id)
 ```
 
 ### DUC {.tabset}
@@ -1120,13 +1188,15 @@ extracShieldDUC <- filter(mitre.data$standards$shield$usecases, mitre.data$stand
 ```
 
 <br>
-Los DUC obtenidos son:
+A partir de los DTEs ecnontrados hemos generado esta tabla donde agrupamos todos los casos de uso para cada uno de los casos.
 <br>
 
 ```{r DUC_t, echo=FALSE, message=FALSE, warning=FALSE}
 extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
 
+<br>
+A continaución podemos apreciar la relación entre las DTEs y sus respectivos casos de uso (DUCs):
 <br>
 
 #### General
@@ -1163,69 +1233,6 @@ tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$to), "DUC"))
 
 mygSimplificadoShieldDUC <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
 mygSimplificadoShieldDUC
-
-#length(extracShieldDUC$id)
-#length(mitre.data$standards$shield$usecases$id)
-```
-
-### DTA {.tabset}
-
-```{r DTA, echo=TRUE, message=FALSE, warning=FALSE}
-#Procedemos a extraer DTA
-extracShield2 <- mitre.data$standards$shield$shieldnet$edges[which(mitre.data$standards$shield$shieldnet$edges$to %in% rowsDTEShield$id),]
-extracShieldDTA <- filter(extracShield2, startsWith(as.character(extracShield2$from), "DTA"))
-extracShieldDTAList <- extracShieldDTA$from
-extracShieldDTA <- filter(mitre.data$standards$shield$tactics, mitre.data$standards$shield$tactics$id %in% extracShieldDTAList)
-extracShieldDTA <- select(extracShieldDTA, id, name, description)
-
-```
-
-<br> 
-Las DTAs obtenidas son:
-<br> 
-
-```{r DTA_t, echo=FALSE, message=FALSE, warning=FALSE}
-extracShieldDTA %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
-```
-
-<br>
-
-#### General
-
-```{r DTA:GEN, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
-tempNodes <- unique(plyr::ldply(
-    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
-))
-
-tempEdges <- unique(plyr::ldply(
-    extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
-))
-
-mygCompletoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
-mygCompletoShieldDTA
-```
-
-#### Simplificado
-
-```{r shield:DTA:simpl, echo=FALSE, message=FALSE, warning=FALSE}
-#Ahora con el caso simplificado: DTEs (son 4) relacionados con las tecnicas T1072 y T1078
-tempNodes <- unique(plyr::ldply(
-    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
-))
-tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
-tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DTA"))
-tempNodes <- rbind(tempNodes1, tempNodes2)
-
-tempEdges <- unique(plyr::ldply(
-    extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
-))
-tempEdges <- filter(tempEdges, startsWith(as.character(tempEdges$from), "DTA"))
-
-mygSimplificadoShieldDTA <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, height = "500px", width = "90%")
-mygSimplificadoShieldDTA
-
-length(extracShieldDTA$id)
-length(mitre.data$standards$shield$tactics$id)
 ```
 
 # Análisis completo sobre la técnica más usada: ***T1072***
