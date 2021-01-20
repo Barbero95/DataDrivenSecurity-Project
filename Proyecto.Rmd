@@ -993,6 +993,7 @@ mygCompletoShieldDTE
 ```{r shield:DTE:simpl, echo=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 #Ahora con el caso simplificado: T1072 y T1078
 tempNodes2Simplificado <- filter(mitre.data$standards$shield$shieldnet$nodes, mitre.data$standards$shield$shieldnet$nodes$id %in% extracShieldSimplificado$from)
+tempNodes2Simplificado$color <- rep("#c6c6ec", length(tempNodes2Simplificado$color))
 tempNodesSimplificado <- rbind(tempNodes1Simplificado, tempNodes2Simplificado)
 
 tempEdgesSimplificado <- unique(plyr::ldply(
@@ -1033,6 +1034,8 @@ Procedemos a obverar la relación entre las DETs encontradas y las tacticas a se
 tempNodes <- unique(plyr::ldply(
     extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
+tempNodes$color[tempNodes$color=="orange"]<-"#c6c6ec"
+tempNodes$color[tempNodes$color=="gold"]<-"#F7E621CC"
 
 tempEdges <- unique(plyr::ldply(
     extracShieldDTAList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
@@ -1050,7 +1053,9 @@ tempNodes <- unique(plyr::ldply(
     extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
 tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes1$color <- rep("#c6c6ec", length(tempNodes1$color))
 tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DTA"))
+tempNodes2$color <- rep("#ffff99", length(tempNodes2$color))
 tempNodes <- rbind(tempNodes1, tempNodes2)
 
 tempEdges <- unique(plyr::ldply(
@@ -1091,6 +1096,7 @@ A continaución podemos apreciar la relación de cada oportunidad defensiva con 
 tempNodes <- unique(plyr::ldply(
     extracShieldDOSList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
+tempNodes$color[tempNodes$color=="orange"]<-"#c6c6ec"
 
 tempEdges <- unique(plyr::ldply(
     extracShieldDOSList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
@@ -1109,6 +1115,7 @@ tempNodes <- unique(plyr::ldply(
     extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
 tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes1$color <- rep("#c6c6ec", length(tempNodes1$color))
 tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DOS"))
 tempNodes <- rbind(tempNodes1, tempNodes2)
 
@@ -1149,7 +1156,8 @@ Procedemos a ver de forma visual los diferentes procedimientos a seguir con cada
 tempNodes <- unique(plyr::ldply(
     extracShieldDPRList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
-
+tempNodes$color[tempNodes$color=="orange"]<-"#c6c6ec"
+tempNodes$color[tempNodes$color=="purple"]<-"#bf80ff"
 tempEdges <- unique(plyr::ldply(
     extracShieldDPRList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
 ))
@@ -1166,7 +1174,9 @@ tempNodes <- unique(plyr::ldply(
     extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
 tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes1$color <- rep("#c6c6ec", length(tempNodes1$color))
 tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DPR"))
+tempNodes2$color <- rep("#bf80ff", length(tempNodes2$color))
 tempNodes <- rbind(tempNodes1, tempNodes2)
 
 tempEdges <- unique(plyr::ldply(
@@ -1196,7 +1206,7 @@ extracShieldDUC %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 ```
 
 <br>
-A continaución podemos apreciar la relación entre las DTEs y sus respectivos casos de uso (DUCs):
+A continuación podemos apreciar la relación entre las DTEs y sus respectivos casos de uso (DUCs):
 <br>
 
 #### General
@@ -1206,7 +1216,8 @@ A continaución podemos apreciar la relación entre las DTEs y sus respectivos c
 tempNodes <- unique(plyr::ldply(
     extracShieldDUCList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
-
+tempNodes$color[tempNodes$color=="orange"]<-"#c6c6ec"
+tempNodes$color[tempNodes$color=="yellow"]<-"#9fbfdf"
 tempEdges <- unique(plyr::ldply(
     extracShieldDUCList, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["edges"]]
 ))
@@ -1223,7 +1234,9 @@ tempNodes <- unique(plyr::ldply(
     extracShieldSimplificado$from, function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$standards$shield$shieldnet)[["nodes"]]
 ))
 tempNodes1 <- filter(tempNodes, tempNodes$id %in% extracShieldSimplificado$from)
+tempNodes1$color <- rep("#c6c6ec", length(tempNodes1$color))
 tempNodes2 <- filter(tempNodes, startsWith(as.character(tempNodes$id), "DUC"))
+tempNodes2$color <- rep("#9fbfdf", length(tempNodes2$color))
 tempNodes <- rbind(tempNodes1, tempNodes2)
 
 tempEdges <- unique(plyr::ldply(
@@ -1241,7 +1254,8 @@ mygSimplificadoShieldDUC
 inod <- unique(plyr::ldply(
   c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
 ))
-
+tempNodes$color[tempNodes$color=="orange"]<-"#c6c6ec"
+tempNodes$color[tempNodes$color=="indianred"]<-"#B7B7B7"
 iedg <- unique(plyr::ldply(
   c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
 ))
