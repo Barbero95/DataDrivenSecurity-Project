@@ -539,12 +539,13 @@ ggplot(tacind, aes(id, industry, fill= Freq)) +
 Podemos observar que la técnica más común, la **T1072** es la que presenta los cuadrados más claros puesto que, al ser la más usada, es la que más se repite entre industrias.   
 
 Por lo que respecta a otras relaciones, podemos observar que, por ejemplo, en las industrias ***Information*** y ***Professional*** una técnica recurrente es ***T1078***.
+<br>
 
-# ¿Quién estaba detras de los ataques?
+# Relación con los estándares
 
 ## Extracción de técnicas
 
-Primero de todo, extraemos todas las técnicas que encontramos en el fichero *incidents* y procedemos a investigar cuales de estas técnicas se encuentran en ATT&CK y en CAR (Standard que hace referencia a técnicas de ATT&CK).  
+Primero de todo, extraemos todas las técnicas que encontramos en el fichero *incidents* y procedemos a investigar cuáles de estas técnicas se encuentran en ATT&CK y en CAR (estándar que hace referencia a técnicas de ATT&CK).  
 
 ```{r extract_techniques_car, echo=TRUE, message=FALSE, warning=FALSE}
 #ids: 28 técnicas que se han usado durante los ataques
@@ -594,9 +595,15 @@ pc <- pie %>% plot_ly(labels = ~Var1, values = ~Freq, type = 'pie',
 pc
 ```
 
-Podemos observar que con el estudio sin las técnicas deprecadas cubrimos un 66.7% de los ataques de modo que se considera correcto seguir únicamente con estos. Cabe decir que, en caso de querer mejor la exactitud se podrían estudiar las técnicas *T1086* y *T1192* cubriendo, así, el 92% de los incidentes del estudio.  
+Vemos que con el estudio sin las técnicas deprecadas cubrimos un 66.7% de los ataques de modo que se considera correcto seguir únicamente con estos. Cabe decir que, en caso de querer mejor la exactitud se podrían estudiar las técnicas *T1086* y *T1192* cubriendo, así, el 92% de los incidentes del estudio. 
+
+<br>
+
+En conclusión, para la realización de esta práctica se trabajará con estos dos estándares (*Att&ck* y *CAR*) para poder sacar conclusiones de nuestros ataques.
 
 ## Extracción de información de las técnicas
+
+### ATT&CK
 
 A partir de las técnicas con las que trabajaremos (las no deprecadas) sacamos la información que nos ofrece el standard de ATT&CK.
 
@@ -616,6 +623,19 @@ rowsInterToAttackSimpli <- which(mitre.data$mitrenet$edges$to %in% tecAttackSimp
 dfFromAttackSimpli <- mitre.data$mitrenet$edges[rowsInterFromAttackSimpli,]
 dfToAttackSimpli <-  mitre.data$mitrenet$edges[rowsInterToAttackSimpli,]
 ```
+
+### CAR
+
+Por otro lado, sacamos la información que nos ofrece CAR:
+
+```{r main_car}
+incidentsCar <- incidents[which(incidents$id %in% tecCar),]
+incidentsCar <- dplyr::select(incidentsCar, id, technique, tactic, org, industry)
+```
+
+<br>
+
+# ¿Quién estaba detras de los ataques?
 
 ## Grupos detrás de los ataques
 
@@ -719,7 +739,11 @@ visEdges(mygCompletaGroups, color="lightgrey", label = "")
 Como se puede observar, queda un grafo caótico. Es por ese motivo que, por un lado, se pueden ir modificando los valores de los nodos para ver mejor las relaciones y, por otro, se ha decidio repetir el grafo solamente teniendo en cuenta las dos técnicas principales: ***T1072*** y ***T1078***.
 
 
-#### Caso simplificado: T1072 y T1078
+<span style="color:grey"> De aquí en adelante, cuando se haga referencia al caso simplificado implicará que el estudio será teniendo en cuenta únicamente ***T1072*** y ***T1078***.</span>
+
+<br>
+
+#### Caso simplificado
 
 
 ```{r graph2, echo=FALSE, message=FALSE, warning=FALSE}
@@ -744,16 +768,15 @@ visEdges(mygSimplificadoGroups, color="lightgrey", label = "")
 
 # ¿Cuál fue el objetivo?
 
-YO CREO QUE AQUI TENEMOS QUE PONER QUE HACE CADA TÉCNICA(?)
-<br>
 A partir de las técnicas encontradas en CAR, en la siguiente tabla se puede apreciar los objetivos y una breve descripción de cada uno de los casos.
+
 <br>
 
 ```{r objetivos, echo=FALSE, message=FALSE, warning=FALSE}
-#Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
+#Primero extraemos de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
 tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
 tempCarEdges <- select(tempCarEdges, from, to)
-#Obtenemos los fiecheros que nos interesan, procedemos a revisar las plataformas afectadas
+#Obtenemos los ficheros que nos interesan, procedemos a revisar las plataformas afectadas
 tempCar <- filter(mitre.data$standards$car$analytics, mitre.data$standards$car$analytics$id %in% tempCarEdges$from)
 tempCar <- select(tempCar, id, subtypes, description)
 
@@ -771,11 +794,13 @@ tempCar %>% kbl() %>% kable_styling()
 
 ```
 
-# ¿Cómo realizaron los ataques?
+# ¿Cómo se realizaron los ataques?
 
-Para estudiar como se realizaron estos ataques se estudiarán las tácticas que fueron llevadas a cabo y los softwares usados. 
+Para estudiar cómo se realizaron estos ataques se estudiarán las tácticas que fueron llevadas a cabo, los softwares y las plataformas desde donde se hicieron. 
 
 ## Tácticas usadas {.tabset}
+
+Para poder estudiar las tácticas usadas extraemos la información de ATT&CK. 
 
 ```{r tact, echo=TRUE, message=FALSE, warning=FALSE}
 #Extraemos las tácticas
@@ -815,7 +840,6 @@ mygCompletoTactics
 
 ### Simplificado
 
-Únicamente se estudian las técnicas ***T1072*** y ***T1078***.
 
 ```{r t_e_A_simpl, echo=FALSE, message=FALSE, warning=FALSE}
 #Ahora con el caso simplificado: T1072 y T1078
@@ -833,9 +857,9 @@ mygSimplificadoTactics
 ```
  
  
-## Softwares usados
+## Softwares usados {.tabset}
 
-### Att&ck {.tabset}
+De nuevo, obtenemos la información del estándar ATT&CK.
 
 ```{r softwares attack, echo=FALSE, message=FALSE, warning=FALSE}
 #Extraemos los softwares
@@ -858,7 +882,7 @@ softwAttack %>% kbl() %>% kable_styling() %>% scroll_box(height = "300px")
 
 A continuación se representará la relación entre las técnicas y los softwares usados.
 
-#### General
+### General
 
 ```{r softgraph, echo=FALSE, message=FALSE, warning=FALSE}
 tempNodes2 <- filter(mitre.data$standards$attck$attcknet$nodes, mitre.data$standards$attck$attcknet$nodes$id %in% softwAttackList)
@@ -877,9 +901,8 @@ mygCompletoSoft <- visNetwork::visNetwork(nodes = tempNodes, edges = tempEdges, 
 mygCompletoSoft
 ```
 
-#### Simplificado
+### Simplificado
 
-Únicamente se estudian las técnicas ***T1072*** y ***T1078***.
 
 ```{r softgraph2, echo=FALSE, message=FALSE, warning=FALSE}
 #Ahora con el caso simplificado: T1072 y T1078
@@ -898,11 +921,13 @@ mygSimplificadoSoft
 #length(softwAttack$mitreid)
 ```
 
-### CAR
+## Plataformas 
+
+Para obtener desde qué plataformas se han realizado los ataques se ha recurrido del estándar CAR.
 
 <br>
 
-```{r platforms, echo=FALSE, fig.height=6, fig.width=6, message=FALSE, warning=FALSE}
+```{r platforms, echo=FALSE, message=FALSE, warning=FALSE}
 #Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
 tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
 tempCarEdges <- select(tempCarEdges, from, to)
@@ -925,6 +950,9 @@ plotPlatforms
 
 ```
 
+Podemos ver que principalmente es **Windows**.
+
+<br>
 
 # ¿Qué podemos hacer para prevenir futuros ataques?
 
@@ -966,7 +994,6 @@ mygCompletoMitigations
 
 ### Simplificado
 
-Únicamente se estudian las técnicas ***T1072*** y ***T1078***.
 
 ```{r mit 3, echo=FALSE, message=FALSE, warning=FALSE}
 #Ahora con el caso simplificado: T1072 y T1078
@@ -1002,7 +1029,7 @@ Una vez tenemos todas las técnicas defensivas (***DTE***) relacionadas con las 
 
 <br>
 
-Para cada uno de éstos, se ha representado la relación global (teniendo en cuenta todas las técnicas de estudio) y la relación simplificada (únicamente se tienen en cuenta las dos técnicas más comunes: *T1072* y *T1078*)
+Para cada uno de éstos, se ha representado la relación global (teniendo en cuenta todas las técnicas de estudio) y la relación simplificada (recordemos que es el caso en el que solo se tienen en cuenta las dos técnicas más comunes: *T1072* y *T1078*)
 
 <br>
 
@@ -1320,10 +1347,10 @@ mygSimplificadoShieldDUC <- visNetwork::visNetwork(nodes = tempNodes, edges = te
 mygSimplificadoShieldDUC
 ```
 
-## Implementacioens a partir de CAR
+## Implementaciones a partir de CAR
 
 <br>
-Gracias a las tecnicas encontradas en CAR con alguna de las tecnicas encontramos implementaciones par aactuar en base alguna de las tecnicas de los incidentes encontradas.
+Gracias a las técnicas encontradas en CAR encontramos implementaciones para actuar frente alguno de los ataques de estudio.
 <br>
 
 ```{r implementations, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1398,17 +1425,22 @@ tempCar %>% kbl() %>% kable_styling() %>%
   add_header_above(c(" " = 2, "Implementations" = 5)) %>% scroll_box(height = "600px", width = "100%")
 ```
 
-
-# Análisis completo sobre la técnica más usada: ***T1072*** y ***T1078***
-
-<br>
-En el último punto se ha realizado un resumen sobre las dos técnicas más usadas en los incidentes. A continuación, podremos observar las tacticas, mitigaciones, sofwares y grupos relacionados con cada una de las técnicas, mediante un grafo y una tabla.
 <br>
 
-## ***T1072*** {.tabset}
+# Análisis completo sobre la técnica más usada: *T1072* y *T1078*
+
+Finalmente, se ha realizado un resumen sobre las dos técnicas más usadas en los incidentes. 
+
+A continuación, se estudian las tácticas, mitigaciones, softwares y grupos relacionados con cada una de las técnicas, mediante un grafo y una tabla.
+<br>
+
+## *T1072*: Third-party Software {.tabset}
 
 <br>
-Empezamos por la técnica más usada en los incidentes. En el siguiente grafo y tabla, se puede apreciar las relaciones que se han encotrado con esta técnica.
+Empezamos por la técnica más usada en los incidentes. En el siguiente grafo y tabla, se puede apreciar las relaciones que se han encontrado con esta técnica. 
+
+<span style="color:grey">Se ha usado ATT&Ck para sacar esta información.</span>
+
 <br>
 
 ### Grafo
@@ -1419,6 +1451,7 @@ inod <- unique(plyr::ldply(
 ))
 inod$color[inod$color=="orange"]<-"#c6c6ec"
 inod$color[inod$color=="indianred"]<-"#B7B7B7"
+inod$color[inod$color=="azure"]<-"#b4cac1"
 iedg <- unique(plyr::ldply(
   c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
 ))
@@ -1458,10 +1491,13 @@ table <- plyr::ldply(inod$id, function(x) {
 table %>% kbl() %>% kable_styling() %>% scroll_box(height = "600px", width = "100%")
 ```
 
-## ***T1078*** {.tabset}
+## *T1078*: Valid Accounts {.tabset}
 
 <br>
-A continuación, podemos ver el grafo y la tabla de las relaciones con la segunda técnica más usada.
+Para acabar, obtenemos el grafo y la tabla de las relaciones que existen con la segunda técnica más usada.
+
+<span style="color:grey">Se ha usado CAR para sacar esta información.</span>
+
 <br>
 
 ### Grafo
@@ -1470,7 +1506,9 @@ A continuación, podemos ver el grafo y la tabla de las relaciones con la segund
 inod <- unique(plyr::ldply(
   c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
 ))
-
+inod$color[inod$color=="orange"]<-"#c6c6ec"
+inod$color[inod$color=="indianred"]<-"#B7B7B7"
+inod$color[inod$color=="azure"]<-"#b4cac1"
 iedg <- unique(plyr::ldply(
   c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["edges"]]
 ))
@@ -1510,3 +1548,17 @@ table <- plyr::ldply(inod$id, function(x) {
 table %>% kbl() %>% kable_styling() %>% scroll_box(height = "600px", width = "100%")
 
 ```
+
+<br>
+
+<br>
+
+# Conclusiones
+
+Para responder a las preguntas planteadas en esta práctica dado el dataframe *incidents* inicial hemos trabajado con:
+* ***ATT&CK***
+* ***CAR***
+* ***Shield***
+aun así, se podrían estudiar los otros estándares para sacar aun más información sobre los ataques de estudio.
+
+Finalmente, mencionar el hecho de que se ha comprobado la alta utilidad de estos estándares para poder informarse sobre qué tipo de incidente se está/se ha enfrentado tu organización. 
