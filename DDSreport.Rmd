@@ -26,6 +26,8 @@ library("dplyr")
 library("visNetwork")
 library("kableExtra")
 library("plotly")
+library("RJSONIO")
+library("stringr")
 ```
 
 ```{r install_mitre, echo=FALSE}
@@ -744,7 +746,6 @@ plotPlatforms
 
 ## A partir de las tecnicas extraidas de Car, podemos ver implementaciones y pseudocodigo para prevenir y actuar contra ataques que usen el mismo patron
 ```{r implementations}
-library("RJSONIO")
 #Primero extraigo de los edges los nombres de los ficheros de car que debemos revisar a paritr de las tecnicas encontradas en car.
 tempCarEdges <- filter(mitre.data$standards$car$carnet$edges, mitre.data$standards$car$carnet$edges$to %in% tecCar)
 tempCarEdges <- select(tempCarEdges, from, to)
@@ -813,6 +814,4 @@ tempCar <- select(tempCar, id, techniques, type, name, dataModel, description, c
 
 
 tempCar %>% kbl() %>% kable_styling()
-
-
 ```
