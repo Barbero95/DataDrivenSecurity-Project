@@ -1366,17 +1366,17 @@ tempCar <- plyr::ldply(tempCar$implementations, function(x) {
 })
 
 tempCar$code <- lapply(tempCar$code, function(y) {
-    if(is.na(y)) y <- "-"
+    if(is.na(y)) y <- "/-"
     y
 })
 
 tempCar$description <- lapply(tempCar$description, function(y) {
-    if(is.na(y)) y <- "-"
+    if(is.na(y)) y <- "/-"
     y
 })
 
 tempCar$name <- lapply(tempCar$name, function(y) {
-    if(is.na(y)) y <- "-"
+    if(is.na(y)) y <- "/-"
     y
 })
 
@@ -1394,13 +1394,24 @@ tempCar <- mutate(tempCar, dataModel = paste(as.character(tempCar$data_model),as
 tempCar <- select(tempCar, id, techniques, type, name, dataModel, description, code)
 
 
-tempCar %>% kbl() %>% kable_styling()
+tempCar %>% kbl() %>% kable_styling() %>%
+  add_header_above(c(" " = 2, "Implementations" = 5)) %>% scroll_box(height = "600px", width = "100%")
 ```
 
 
 # Análisis completo sobre la técnica más usada: ***T1072*** y ***T1078***
 
-## ***T1072***
+<br>
+En el último punto se ha realizado un resumen sobre las dos técnicas más usadas en los incidentes. A continuación, podremos observar las tacticas, mitigaciones, sofwares y grupos relacionados con cada una de las técnicas, mediante un grafo y una tabla.
+<br>
+
+## ***T1072*** {.tabset}
+
+<br>
+Empezamos por la técnica más usada en los incidentes. En el siguiente grafo y tabla, se puede apreciar las relaciones que se han encotrado con esta técnica.
+<br>
+
+### Grafo
 
 ```{r T1072, echo=FALSE, message=FALSE, warning=FALSE}
 inod <- unique(plyr::ldply(
@@ -1416,9 +1427,46 @@ myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", widt
 myg
 ```
 
-## ***T1078***
+### Tabla
 
-```{r T1078}
+```{r T1072-table, echo=FALSE, message=FALSE, warning=FALSE}
+inod <- unique(plyr::ldply(
+  c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+inod <- filter(inod, !startsWith(as.character(inod$id), "T1072"))
+
+table <- plyr::ldply(inod$id, function(x) {
+  if(startsWith(as.character(x), "G")) {
+    gA <- raw_attck$groups[which(raw_attck$groups$mitreid %in% x),]
+    gA <- dplyr::select(gA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "TA")) {
+    tA <- raw_attck$tactics[which(raw_attck$tactics$mitreid %in% x),]
+    tA <- dplyr::select(tA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "M")) {
+    mA <- raw_attck$mitigation[which(raw_attck$mitigation$mitreid %in% x),]
+    mA <- dplyr::select(mA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "S")) {
+    sA <- raw_attck$software[which(raw_attck$software$mitreid %in% x),]
+    sA <- dplyr::select(sA, mitreid, name, description)
+  }
+})
+
+table %>% kbl() %>% kable_styling() %>% scroll_box(height = "600px", width = "100%")
+```
+
+## ***T1078*** {.tabset}
+
+<br>
+A continuación, podemos ver el grafo y la tabla de las relaciones con la segunda técnica más usada.
+<br>
+
+### Grafo
+
+```{r T1078, echo=FALSE, message=FALSE, warning=FALSE}
 inod <- unique(plyr::ldply(
   c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
 ))
@@ -1429,4 +1477,36 @@ iedg <- unique(plyr::ldply(
 
 myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)
 myg
+```
+
+### Tabla
+
+```{r T1078-table, echo=FALSE, message=FALSE, warning=FALSE}
+inod <- unique(plyr::ldply(
+  c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+inod <- filter(inod, !startsWith(as.character(inod$id), "T1078"))
+
+table <- plyr::ldply(inod$id, function(x) {
+  if(startsWith(as.character(x), "G")) {
+    gA <- raw_attck$groups[which(raw_attck$groups$mitreid %in% x),]
+    gA <- dplyr::select(gA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "TA")) {
+    tA <- raw_attck$tactics[which(raw_attck$tactics$mitreid %in% x),]
+    tA <- dplyr::select(tA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "M")) {
+    mA <- raw_attck$mitigation[which(raw_attck$mitigation$mitreid %in% x),]
+    mA <- dplyr::select(mA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "S")) {
+    sA <- raw_attck$software[which(raw_attck$software$mitreid %in% x),]
+    sA <- dplyr::select(sA, mitreid, name, description)
+  }
+})
+
+table %>% kbl() %>% kable_styling() %>% scroll_box(height = "600px", width = "100%")
+
 ```

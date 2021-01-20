@@ -687,6 +687,37 @@ myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", widt
 myg
 ```
 
+##Tabla de todas las relaciones ("T1078")
+```{r T1078-table}
+inod <- unique(plyr::ldply(
+  c("T1078"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+inod <- filter(inod, !startsWith(as.character(inod$id), "T1078"))
+
+table <- plyr::ldply(inod$id, function(x) {
+  if(startsWith(as.character(x), "G")) {
+    gA <- raw_attck$groups[which(raw_attck$groups$mitreid %in% x),]
+    gA <- dplyr::select(gA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "TA")) {
+    tA <- raw_attck$tactics[which(raw_attck$tactics$mitreid %in% x),]
+    tA <- dplyr::select(tA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "M")) {
+    mA <- raw_attck$mitigation[which(raw_attck$mitigation$mitreid %in% x),]
+    mA <- dplyr::select(mA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "S")) {
+    sA <- raw_attck$software[which(raw_attck$software$mitreid %in% x),]
+    sA <- dplyr::select(sA, mitreid, name, description)
+  }
+})
+
+table %>% kbl() %>% kable_styling()
+
+```
+
 ##Analisis entero sobre la tecnica más usada referente a Attack ("T1072")
 ```{r T1072}
 inod <- unique(plyr::ldply(
@@ -699,6 +730,35 @@ iedg <- unique(plyr::ldply(
 
 myg <- visNetwork::visNetwork(nodes = inod, edges = iedg, height = "500px", width = "100%", main="Esquema") %>% visPhysics(enabled = FALSE)
 myg
+```
+##Tabla de todas las relaciones ("T1072")
+```{r T1072-table}
+inod <- unique(plyr::ldply(
+  c("T1072"), function(x) mitre::getNodeNeighbors(node = x, mitrenet = mitre.data$mitrenet)[["nodes"]]
+))
+
+inod <- filter(inod, !startsWith(as.character(inod$id), "T1072"))
+
+table <- plyr::ldply(inod$id, function(x) {
+  if(startsWith(as.character(x), "G")) {
+    gA <- raw_attck$groups[which(raw_attck$groups$mitreid %in% x),]
+    gA <- dplyr::select(gA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "TA")) {
+    tA <- raw_attck$tactics[which(raw_attck$tactics$mitreid %in% x),]
+    tA <- dplyr::select(tA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "M")) {
+    mA <- raw_attck$mitigation[which(raw_attck$mitigation$mitreid %in% x),]
+    mA <- dplyr::select(mA, mitreid, name, description)
+  }
+  else if(startsWith(as.character(x), "S")) {
+    sA <- raw_attck$software[which(raw_attck$software$mitreid %in% x),]
+    sA <- dplyr::select(sA, mitreid, name, description)
+  }
+})
+
+table %>% kbl() %>% kable_styling()
 ```
 
 ## objetivos de los atacantes, a partir de las 5 tecnicas extraidas en CAR
